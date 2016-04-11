@@ -1,8 +1,12 @@
+# LOAD DATA AND LIBRARIES -----
 library(effects)
 library(lme4)
 library(spida)
 library(scales)
 library(lsmeans)
+library(reshape2)
+library(plyr)
+library(lattice)
 
 addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
   ii <- order(x)
@@ -12,15 +16,23 @@ addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
   polygon(c(x, rev(x)), c(y1, rev(y2)), col=col, border=NA, ...)
 }
 
-
 data <- read.csv("phase3.csv")
 
-# Calculate proportion D in each sample
+# Calculate proportion D in each sample -----
 data$propD <- data$D.SH / (data$C.SH + data$D.SH)
 hist(data$propD)
 
+# Remove zeros and ones and recalc proportions
+data[is.na(data$C.SH), "C.SH"] <- 1e-5
+data[data$C.SH==0, "C.SH"] <- 1e-5
+data[is.na(data$D.SH), "D.SH"] <- 1e-5
+data[data$D.SH==0, "D.SH"] <- 1e-5
+data$propD2 <- data$D.SH / (data$C.SH + data$D.SH)
+data[is.na(data$tot.SH), "propD2"] <- NA
+data[1:20,]
+na.omit(data)$propD2
+
 # Plot changes in proportion D over time
-library(lattice)
 xyplot(propD ~ time | ramp, groups= ~ sample, data = na.omit(data), type="o", lty=1)
 xyplot(asin(sqrt(propD)) ~ time | ramp, groups= ~ sample, data = na.omit(data), type="o", lty=1)
 #xyplot(propD ~ time | ramp + mother, groups= ~ sample, data = na.omit(data), type="o", lty=1)
@@ -37,6 +49,9 @@ xyplot(asin(sqrt(propD)) ~ time | ramp, groups= ~ sample, data = na.omit(data), 
 nlevels(data$sample)
 dom <- with(data[data$time==0, ], 
             data.frame(sample=sample, propD=propD, 
+                       dom=ifelse(propD > 0.9, "D", ifelse(propD < 0.1, "C", ifelse(is.na(propD), NA, "mix")))))
+dom <- with(data[data$time==0, ], 
+            data.frame(sample=sample, propD=propD, 
                        dom=ifelse(propD > 0.9, "D", ifelse(propD < 0.1, "C", NA))))
 
 nlevels(droplevels(dom[!is.na(dom$dom), "sample"]))
@@ -48,6 +63,21 @@ data <- merge(data, dom, by="sample", all.x=T)
 table(data[data$time==0, "dom"])  # 21 C-dominant and 83 D-dominant corals = 104 corals with qPCR data
 data <- data[with(data, order(sample, time)), ]
 nlevels(droplevels(data$sample))
+
+xyplot(propD.x ~ time | ramp + dom, groups= ~ sample, data = na.omit(data), type="o", lty=1)
+xyplot(asin(sqrt(propD.x)) ~ time | ramp + dom, groups= ~ sample, data = na.omit(data), type="o", lty=1)
+
+#mod <- gamm4(propD.x ~ s(time, by=interaction(ramp, dom), k=2) + ramp + dom, random=~(1|mother/sample), data=na.omit(data), family=betar(link="logit"))
+data$timef <- factor(data$time)
+mod <- glmer(propD.x ~ timef * ramp * dom + (1|mother/sample), data=na.omit(data), family=binomial(link="logit"))
+mod <- glm(propD.x ~ timef * ramp * dom, data=na.omit(data), family=binomial(link="logit"))
+summary(mod)
+plot(Effect(c("timef"), mod))
+plot(Effect(c("timef", "ramp", "dom"), mod), type="response")
+summary(Effect(c("timef", "ramp", "dom"), mod))
+
+head(data)
+betareg(propD2 ~ timef * dom * ramp, data=na.omit(data))
 
 # Calculate relative change in Fv/Fm and difference in Fv/Fm (rfvfm, dfvfm)
 for (sample in data$sample) {
@@ -69,6 +99,7 @@ xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1
 mod.all <- lmerTest::lmer(rfvfm ~ poly(time, 2) * ramp * dom + (1|mother/sample), data=data)
 anovatab <- lmerTest::anova(mod.all)
 anovatab
+
 # Test C vs. D differences at each date using model fit
 rg <- ref.grid(mod.all, at=list(time=c(0,7,14,21,28,35,42,49,56,63)))
 lsm <- lsmeans(rg, specs=pairwise ~ dom | ramp * time)  # CORRECT FOR MULTIPLE TESTING?
@@ -133,6 +164,9 @@ for (ramp in c("cool", "heat")) {
 # i.e., not enough temporal resolution to be confident in quadratic effect of time....
 # get SH data frame and plot raw data
 shdf <- droplevels(subset(data, !is.na(tot.SH)))
+shdf[shdf$tot.SH==0,"tot.SH"] <- NA
+range(shdf$tot.SH, na.rm=T)
+shdf[is.na(shdf$tot.SH), "tot.SH"] <- 1e-5
 xyplot(log10(tot.SH) ~ time | ramp + dom, groups= ~ sample, data = shdf, type="o", lty=1)
 # create list split by dom&ramp, fit mixed model for each group
 shl <- split(shdf, f=interaction(shdf$ramp, shdf$dom))
