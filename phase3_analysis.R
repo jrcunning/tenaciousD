@@ -23,10 +23,10 @@ data$propD <- data$D.SH / (data$C.SH + data$D.SH)
 hist(data$propD)
 
 # Remove zeros and ones and recalc proportions
-data[is.na(data$C.SH), "C.SH"] <- 1e-5
-data[data$C.SH==0, "C.SH"] <- 1e-5
-data[is.na(data$D.SH), "D.SH"] <- 1e-5
-data[data$D.SH==0, "D.SH"] <- 1e-5
+data[is.na(data$C.SH), "C.SH"] <- 1e-6
+data[data$C.SH==0, "C.SH"] <- 1e-6
+data[is.na(data$D.SH), "D.SH"] <- 1e-6
+data[data$D.SH==0, "D.SH"] <- 1e-6
 data$propD2 <- data$D.SH / (data$C.SH + data$D.SH)
 data[is.na(data$tot.SH), "propD2"] <- NA
 data[1:20,]
@@ -66,6 +66,10 @@ nlevels(droplevels(data$sample))
 
 xyplot(propD.x ~ time | ramp + dom, groups= ~ sample, data = na.omit(data), type="o", lty=1)
 xyplot(asin(sqrt(propD.x)) ~ time | ramp + dom, groups= ~ sample, data = na.omit(data), type="o", lty=1)
+
+xyplot(log(tot.SH) ~ time | ramp + dom, groups= ~ sample, data = na.omit(data), type="o", lty=1)
+
+
 
 #mod <- gamm4(propD.x ~ s(time, by=interaction(ramp, dom), k=2) + ramp + dom, random=~(1|mother/sample), data=na.omit(data), family=betar(link="logit"))
 data$timef <- factor(data$time)
@@ -315,8 +319,8 @@ with(geostats$heat.D, {
 
 # C vs. D scatterplots
 shdf <- droplevels(subset(data, !is.na(tot.SH)))
-shdf[which(shdf[, "C.SH"]==0), "C.SH"] <- 1e-5
-shdf[which(shdf[, "D.SH"]==0), "D.SH"] <- 1e-5
+shdf[which(shdf[, "C.SH"]==0), "C.SH"] <- 1e-6
+shdf[which(shdf[, "D.SH"]==0), "D.SH"] <- 1e-6
 head(shdf)
 cd <- split(shdf, f=interaction(shdf$ramp, shdf$time))
 par(mfrow=c(1,1))
@@ -332,4 +336,53 @@ plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="28"), yl
 arrows(log10(cd$cool.28$D.SH), log10(cd$cool.28$C.SH), log10(cd$cool.42$D.SH), log10(cd$cool.42$C.SH))
 plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="42"), ylim=c(-5,1), xlim=c(-5,1))
 plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="63"), ylim=c(-5,1), xlim=c(-5,1))
+
+
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="0" & dom=="D"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="28" & dom=="D"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="42" & dom=="D"), ylim=c(-5,1), xlim=c(-5,1))
+
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="0" & dom=="C"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="28" & dom=="C"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="42" & dom=="C"), ylim=c(-5,1), xlim=c(-5,1))
+
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="0" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="28" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="42" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="0" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="28" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="63" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+
+plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="42" & dom=="mix"), ylim=c(-5,1), xlim=c(-5,1))
+
+means <- aggregate(shdf[,c("C.SH","D.SH")], by=list(ramp=shdf$ramp, dom=shdf$dom, time=shdf$time), FUN=function(x) mean(log10(x)))
+colnames(means) <- c("ramp", "dom", "time", "Cmean", "Dmean")
+ses <- aggregate(shdf[,c("C.SH","D.SH")], by=list(ramp=shdf$ramp, dom=shdf$dom, time=shdf$time), FUN=function(x) sd(log10(x))/sqrt(length(x)))
+colnames(ses) <- c("ramp", "dom", "time", "Cse", "Dse")
+
+dat <- merge(means, ses, all=T)
+
+par(mfrow=c(1,2), mar=c(3,3,1,1), mgp=c(1.5,0.4,0), tcl=-0.3)
+with(dat, {
+  for(ramp in levels(ramp)) {
+    df <- dat[dat$ramp==ramp, ]
+    plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="log10 D S/H",ylab="log10 C S/H")
+    abline(a=0,b=1,lty=2)
+    arrows(df$Dmean, df$Cmean+df$Cse, df$Dmean, df$Cmean-df$Cse, length=0.025, angle=90, code=3, col="black")
+    arrows(df$Dmean+df$Dse, df$Cmean, df$Dmean-df$Dse, df$Cmean, length=0.025, angle=90, code=3, col="black")
+    #points(df$Dmean, df$Cmean)
+    for (j in 2:nrow(df)) {
+      if (df$time[j] > df$time[j-1]) {
+        arrows(df$Dmean[j-1], df$Cmean[j-1], df$Dmean[j], df$Cmean[j], length=0.1, code=2, lwd=2,
+                     col=c("blue","red","green")[df$dom[j]])
+      }
+    }
+  }
+})
+
+
+
+
+
 
