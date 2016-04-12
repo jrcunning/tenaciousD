@@ -170,7 +170,7 @@ for (ramp in c("cool", "heat")) {
 shdf <- droplevels(subset(data, !is.na(tot.SH)))
 shdf[shdf$tot.SH==0,"tot.SH"] <- NA
 range(shdf$tot.SH, na.rm=T)
-shdf[is.na(shdf$tot.SH), "tot.SH"] <- 1e-5
+shdf[is.na(shdf$tot.SH), "tot.SH"] <- 2e-6
 xyplot(log10(tot.SH) ~ time | ramp + dom, groups= ~ sample, data = shdf, type="o", lty=1)
 # create list split by dom&ramp, fit mixed model for each group
 shl <- split(shdf, f=interaction(shdf$ramp, shdf$dom))
@@ -214,20 +214,23 @@ with(geostats$heat.D, {
   arrows(time, mean-sd, time, mean+sd, code=3, angle=90, length=0.05, col="red")})
 
 # Multipanel figure -------------
-layout(mat=matrix(c(1,2,2,3,3,4,5,5,6,6), ncol=2))
+#layout(mat=matrix(c(1,2,2,3,3,4,5,5,6,6), ncol=2))
+layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
 par(mgp=c(1.5,0.25,0), tck=-0.06)
-# Cooling temp
-par(mar=c(0,3,2,1))
-cooltemp <- data.frame(time=seq(0,63),
-                       temp=c(24, rep(seq(23,15,-1), each=7)))
-plot(temp ~ time, data=cooltemp, type="l", bty="n", xaxt="n", ann=F, yaxt="n")
-axis(side=2, at=seq(15,24,1), labels=c(15,NA,NA,18,NA,NA,21,NA,NA,24))
-mtext(side=2, text="Temp. (°C)", cex=0.66, line=1.5)
-title("Cooling")
+# # Cooling temp
+# par(mar=c(0,3,2,1))
+# cooltemp <- data.frame(time=seq(0,63), temp=c(24, rep(seq(23,15,-1), each=7)))
+# plot(temp ~ time, data=cooltemp, type="l", bty="n", xaxt="n", ann=F, yaxt="n")
+# axis(side=2, at=seq(15,24,1), labels=c(15,NA,NA,18,NA,NA,21,NA,NA,24))
+# mtext(side=2, text="Temp. (°C)", cex=0.66, line=1.5)
+# title("Cooling")
 # Cooling Fv/Fm
-par(mar=c(1.5,3,1.5,1))
+par(mar=c(1,3,4,1))
 plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=-0.03,
      xaxt="n", ann=F)
+title("A. Cooling", adj=0)
+# axis(side=3, at=seq(0,63,7), labels=NA)
+# axis(side=3, at=seq(0,62,7)+3.5, labels=seq(23,15,-1), tick=F)
 mtext(side=2, text="Relative Fv/Fm", cex=0.66, line=1.5)
 with(predlist[["cool"]], {
   lapply(predlist[["cool"]], function(dom) {
@@ -244,8 +247,13 @@ lapply(datlist[["cool"]], function(dom) {
 with(fvfmsigs[which(fvfmsigs$ramp=="cool"), ],
      points(time, c(1,1,1), pch="*", cex=1.5))
 # Cooling S/H
-par(mar=c(3,3,0,1))
-plot(NA, xlim=c(0,63), ylim=c(-5, 0.5), bty="n", tck=-0.03, ylab="", xlab="days")
+par(mar=c(5,3,0,1))
+plot(NA, xlim=c(0,63), ylim=c(-6, 0.5), bty="n", tck=-0.03, ylab="", xlab="", xaxt="n")
+axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=-0.03)
+axis(side=1, at=seq(0,63,7), labels=NA, lwd=0, lwd.ticks=par("lwd"), line=2, tck=0.03)
+mtext(side=1, text="days (below) and temperature (°C, above)", cex=0.66, line=3.5)
+#axis(side=1, at=seq(0,63,7), labels=NA, line=0.5, tcl=0.5)
+axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), "°"), tick=F, line=0.5)
 mtext(side=2, text="log10 S/H ratio", cex=0.66, line=1.5)
 with(geostats$cool.C, {
   lines(time, mean, type="o", col="black", lty=2, pch=21, bg="blue")
@@ -255,17 +263,20 @@ with(geostats$cool.C, {
 with(geostats$cool.D, {
   lines(time, mean, type="o", col="black", lty=2, pch=21, bg="red")
   arrows(time, mean-sd, time, mean+sd, code=3, angle=90, length=0.05, col="red")})
-# Heating Temp
-par(mar=c(0,3,2,1))
-heattemp <- data.frame(time=seq(0, 63),
-                       temp=c(29, rep(seq(30,35,1), each=7), rep(NA, 21)))
-plot(temp ~ time, data=heattemp, type="l", bty="n", xaxt="n", ann=F, ylim=c(29,35))
-mtext(side=2, text="Temp. (°C)", cex=0.66, line=1.5)
-title("Heating")
+# # Heating Temp
+# par(mar=c(0,3,2,1))
+# heattemp <- data.frame(time=seq(0, 63),
+#                        temp=c(29, rep(seq(30,35,1), each=7), rep(NA, 21)))
+# plot(temp ~ time, data=heattemp, type="l", bty="n", xaxt="n", ann=F, ylim=c(29,35))
+# mtext(side=2, text="Temp. (°C)", cex=0.66, line=1.5)
+# title("Heating")
 # Heating Fv/Fm
-par(mar=c(1.5,3,1.5,1))
+par(mar=c(1,3,4,1))
 plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=-0.03, ylab="fvfm", xlab="days",
      xaxt="n", ann=F)
+title("B. Heating", adj=0)
+#axis(side=3, at=seq(0,42,7), labels=NA)
+#axis(side=3, at=seq(0,41,7)+3.5, labels=seq(30,35,1), tick=F)
 mtext(side=2, text="Relative Fv/Fm", cex=0.66, line=1.5)
 with(predlist[["heat"]], {
   lapply(predlist[["heat"]], function(dom) {
@@ -282,9 +293,15 @@ lapply(datlist[["heat"]], function(dom) {
   points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
 })
 # Heating S/H
-par(mar=c(3,3,0,1))
-plot(NA, xlim=c(0,63), ylim=c(-5, 0.5), bty="n", tck=-0.03, ylab="", xlab="days")
+par(mar=c(5,3,0,1))
+plot(NA, xlim=c(0,63), ylim=c(-6, 0.5), bty="n", tck=-0.03, ylab="", xlab="", xaxt="n")
+axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), tck=-0.03, line=2)
+axis(side=1, at=seq(0,42,7), lwd=0, lwd.ticks=par("lwd"), labels=NA, tck=0.03, line=2)
+mtext(side=1, text="days", cex=0.66, line=3.5)
 mtext(side=2, text="log10 S/H ratio", cex=0.66, line=1.5)
+#axis(side=1, at=seq(0,41,7), labels=seq(30,35,1), line=-1)
+#axis(side=1, at=seq(0,42,7), labels=NA, tck=-0.03, line=0.5)
+axis(side=1, at=seq(0,41,7)+3.5, labels=paste0(seq(30,35,1), "°"), tick=F, line=0.5)
 with(geostats$heat.C, {
   lines(time, mean, type="o", col="black", lty=2, pch=21, bg="blue")
   arrows(time, mean-sd, time, mean+sd, code=3, angle=90, length=0.05, col="blue")
@@ -322,21 +339,7 @@ shdf <- droplevels(subset(data, !is.na(tot.SH)))
 shdf[which(shdf[, "C.SH"]==0), "C.SH"] <- 1e-6
 shdf[which(shdf[, "D.SH"]==0), "D.SH"] <- 1e-6
 head(shdf)
-cd <- split(shdf, f=interaction(shdf$ramp, shdf$time))
 par(mfrow=c(1,1))
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="0"), ylim=c(-5,1), xlim=c(-5,1))
-arrows(log10(cd$heat.0$D.SH), log10(cd$heat.0$C.SH), log10(cd$heat.28$D.SH), log10(cd$heat.28$C.SH))
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="28"), ylim=c(-5,1), xlim=c(-5,1))
-arrows(log10(cd$heat.28$D.SH), log10(cd$heat.28$C.SH), log10(cd$heat.42$D.SH), log10(cd$heat.42$C.SH))
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="42"), ylim=c(-5,1), xlim=c(-5,1))
-
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="0"), ylim=c(-5,1), xlim=c(-5,1))
-arrows(log10(cd$cool.0$D.SH), log10(cd$cool.0$C.SH), log10(cd$cool.28$D.SH), log10(cd$cool.28$C.SH))
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="28"), ylim=c(-5,1), xlim=c(-5,1))
-arrows(log10(cd$cool.28$D.SH), log10(cd$cool.28$C.SH), log10(cd$cool.42$D.SH), log10(cd$cool.42$C.SH))
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="42"), ylim=c(-5,1), xlim=c(-5,1))
-plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="cool" & time=="63"), ylim=c(-5,1), xlim=c(-5,1))
-
 
 plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="0" & dom=="D"), ylim=c(-5,1), xlim=c(-5,1))
 plot(log10(C.SH) ~ log10(D.SH), data=subset(shdf, ramp=="heat" & time=="28" & dom=="D"), ylim=c(-5,1), xlim=c(-5,1))
@@ -364,22 +367,32 @@ colnames(ses) <- c("ramp", "dom", "time", "Cse", "Dse")
 dat <- merge(means, ses, all=T)
 
 par(mfrow=c(1,2), mar=c(3,3,1,1), mgp=c(1.5,0.4,0), tcl=-0.3)
-with(dat, {
-  for(ramp in levels(ramp)) {
-    df <- dat[dat$ramp==ramp, ]
-    plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="log10 D S/H",ylab="log10 C S/H")
+
+    df <- dat[dat$ramp=="cool", ]
+    plot(NA, xlim=c(-6,0), ylim=c(-6,0),xlab="Clade D abundance (log10 S/H)",ylab="Clade C abundance (log10 S/H)")
     abline(a=0,b=1,lty=2)
     arrows(df$Dmean, df$Cmean+df$Cse, df$Dmean, df$Cmean-df$Cse, length=0.025, angle=90, code=3, col="black")
     arrows(df$Dmean+df$Dse, df$Cmean, df$Dmean-df$Dse, df$Cmean, length=0.025, angle=90, code=3, col="black")
-    #points(df$Dmean, df$Cmean)
     for (j in 2:nrow(df)) {
       if (df$time[j] > df$time[j-1]) {
         arrows(df$Dmean[j-1], df$Cmean[j-1], df$Dmean[j], df$Cmean[j], length=0.1, code=2, lwd=2,
                      col=c("blue","red","green")[df$dom[j]])
       }
     }
-  }
-})
+    text(-6, 0, labels=expression(bold("A. Cooling")), adj=0)
+    legend("bottomright", legend=c("C-dominant", "D-dominant", "C+D"), lty=1, col=c("blue","red","green"), inset=0.05)
+    df <- dat[dat$ramp=="heat", ]
+    plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D abundance (log10 S/H)",ylab="Clade C abundance (log10 S/H)")
+    abline(a=0,b=1,lty=2)
+    arrows(df$Dmean, df$Cmean+df$Cse, df$Dmean, df$Cmean-df$Cse, length=0.025, angle=90, code=3, col="black")
+    arrows(df$Dmean+df$Dse, df$Cmean, df$Dmean-df$Dse, df$Cmean, length=0.025, angle=90, code=3, col="black")
+    for (j in 2:nrow(df)) {
+      if (df$time[j] > df$time[j-1]) {
+        arrows(df$Dmean[j-1], df$Cmean[j-1], df$Dmean[j], df$Cmean[j], length=0.1, code=2, lwd=2,
+               col=c("blue","red","green")[df$dom[j]])
+      }
+    }
+    text(-6, 0, labels=expression(bold("B. Heating")), adj=0)
 
 
 
