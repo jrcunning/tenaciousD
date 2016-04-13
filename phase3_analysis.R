@@ -86,6 +86,75 @@ predlist <- lapply(predlist, function(x) rev(split(x, f=x$dom)))
 predlist$heat$C <- predlist$heat$C[predlist$heat$C$time <= 42, ]
 predlist$heat$D <- predlist$heat$D[predlist$heat$D$time <= 42, ]
 
+# Analyze Fv/Fm using GAM
+gm <- gamm4(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=~(1|mother/sample), data=data)
+pred.all <- expand.grid(time=seq(0,63,1), ramp=factor(c("cool", "heat")), dom=factor(c("C", "D")))
+# Predict values and SEs
+gmpreds <- data.frame(cbind(pred.all, predict(gm$gam, pred.all, re.form=NA, se.fit=T)))
+# Plot values and SEs
+plot(NA, xlim=c(0,63), ylim=c(0,1.1))
+lapply(datlist[["cool"]], function(dom) {
+  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
+         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
+})
+with(subset(gmpreds, ramp=="cool" & dom=="C"), {
+  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("blue", 0.5))
+  lines(time, fit)
+})
+with(subset(gmpreds, ramp=="cool" & dom=="D"), {
+  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("red", 0.5))
+  lines(time, fit)
+})
+plot(NA, xlim=c(0,63), ylim=c(0,1.1))
+lapply(datlist[["heat"]], function(dom) {
+  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
+         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
+})
+with(subset(gmpreds, ramp=="heat" & dom=="C" & time <=42), {
+  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("blue", 0.5))
+  lines(time, fit)
+})
+with(subset(gmpreds, ramp=="heat" & dom=="D" & time <=42), {
+  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("red", 0.5))
+  lines(time, fit)
+})
+
+# Plot raw data +/- standard deviation
+plot(NA, xlim=c(0,63), ylim=c(0,1.1))
+lapply(datlist[["cool"]], function(dom) {
+  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
+         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
+})
+plot(NA, xlim=c(0,63), ylim=c(0,1.1))
+mod <- gamm4(rfvfm ~ s(time, k=5), random=~(1|mother/sample), data=subset(data, ramp=="heat" & dom=="C"))
+modp <- data.frame(predict(mod$gam, data.frame(time=seq(0,63,1)), re.form=NA, se.fit=T))
+addpoly(seq(0,63,1), modp$fit+1.96*modp$se.fit, modp$fit-1.96*modp$se.fit, col="red")
+mod <- gamm4(rfvfm ~ s(time, k=5), random=~(1|mother/sample), data=subset(data, ramp=="heat" & dom=="D"))
+modp <- data.frame(predict(mod$gam, data.frame(time=seq(0,63,1)), re.form=NA, se.fit=T))
+addpoly(seq(0,63,1), modp$fit+1.96*modp$se.fit, modp$fit-1.96*modp$se.fit, col="pink")
+mod <- gamm4(rfvfm ~ s(time, by=dom, k=5) + dom, random=~(1|mother/sample), data=subset(data, ramp=="heat"))
+preddf <- expand.grid(time=seq(0,63,1), dom=c("C","D"))
+modp <- data.frame(cbind(preddf, predict(mod$gam, preddf, re.form=NA, se.fit=T)))
+with(subset(modp, dom=="C"), {
+  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col="blue")
+  lines(time, fit)
+})
+with(subset(modp, dom=="D"), {
+  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col="red")
+  lines(time, fit)
+})
+
+lapply(datlist[["heat"]], function(dom) {
+  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
+         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
+})
+
+
+
 # Analyze total S/H ratio using linear mixed models S/H ANALYSIS ------------
 # analyse SH ratios with time as discrete factor (not enough temporal resolution to model as continuous)
 # get SH data frame and plot raw data
@@ -233,3 +302,11 @@ for (j in 2:nrow(df)) {
 }
 text(par("usr")[1], 0.5, labels=expression(bold("B. Heating")), adj=0, xpd=NA)
 dev.off()
+
+# Analyze Fv/Fm vs. propD?
+mod <- lmerTest::lmer(fvfm ~ poly(time, 2) * ramp * propD + (1|mother/sample), data=data)
+anova(mod, test="F") 
+lmerTest::anova(mod)
+plot(Effect(c("time", "ramp", "propD"), mod))
+
+xyplot(fvfm ~ propD | time + ramp, data=data)
