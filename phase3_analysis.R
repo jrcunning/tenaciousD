@@ -86,12 +86,40 @@ predlist <- lapply(predlist, function(x) rev(split(x, f=x$dom)))
 predlist$heat$C <- predlist$heat$C[predlist$heat$C$time <= 42, ]
 predlist$heat$D <- predlist$heat$D[predlist$heat$D$time <= 42, ]
 
-# Analyze Fv/Fm using GAM
+# Test differences between C and D at each time point for each treatment using mixed model
+mod <- lmer(rfvfm ~ factor(time) * dom + (1|mother), data=subset(data, ramp=="heat"))
+lsm <- lsmeans(mod, specs=c("dom", "time"))
+tests <- pairs(lsm, by="time")
+rbind(tests)
+## Many significant differences
+
+
+# Analyze Fv/Fm using GAM -----
 gm <- gamm4(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=~(1|mother/sample), data=data)
-pred.all <- expand.grid(time=seq(0,63,1), ramp=factor(c("cool", "heat")), dom=factor(c("C", "D")))
+gm <- gamm(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=list(mother=~1, sample=~1), data=data)
+pdat <- rbind(expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D"))),
+              expand.grid(time=seq(0,42,1), ramp=factor("heat"), dom=factor(c("C","D"))))
 # Predict values and SEs
-gmpreds <- data.frame(cbind(pred.all, predict(gm$gam, pred.all, re.form=NA, se.fit=T)))
-# Plot values and SEs
+gmpreds <- data.frame(cbind(pdat, predict(gm$gam, pdat, re.form=NA, se.fit=T)))
+# Simulate from posterior distribution of beta
+set.seed(789)
+Rbeta <- mvrnorm(n = 1000, coef(gm$gam), vcov(gm$gam))
+Xp <- predict(gm$gam, newdata = pdat, type = "lpmatrix")
+sim <- Xp %*% t(Rbeta)
+# Extract 95% confidence intervals of simulated values
+gmpreds$lci <- apply(sim, 1, quantile, 0.025)
+gmpreds$uci <- apply(sim, 1, quantile, 0.975)
+
+# Calculate 95% confidence interval on difference between C and D corals at certain dates
+sim1 <- cbind(pdat, sim)
+sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
+sim1split <- split(sim1, f=interaction(sim1$time, sim1$ramp, drop=T))
+CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, diff), c(0.025, 0.975)))
+# Test if 95% CI on difference between C and D corals contains zero
+test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
+test0[test0==F]  # Shows when C and D are significantly different with p<0.05
+
+# Plot predictions and CIs -----
 plot(NA, xlim=c(0,63), ylim=c(0,1.1))
 lapply(datlist[["cool"]], function(dom) {
   arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -99,11 +127,11 @@ lapply(datlist[["cool"]], function(dom) {
   points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
 })
 with(subset(gmpreds, ramp=="cool" & dom=="C"), {
-  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("blue", 0.5))
+  addpoly(time, uci, lci, col=alpha("blue", 0.4))
   lines(time, fit)
 })
 with(subset(gmpreds, ramp=="cool" & dom=="D"), {
-  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("red", 0.5))
+  addpoly(time, uci, lci, col=alpha("red", 0.4))
   lines(time, fit)
 })
 plot(NA, xlim=c(0,63), ylim=c(0,1.1))
@@ -113,49 +141,29 @@ lapply(datlist[["heat"]], function(dom) {
   points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
 })
 with(subset(gmpreds, ramp=="heat" & dom=="C" & time <=42), {
-  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("blue", 0.5))
+  addpoly(time, uci, lci, col=alpha("blue", 0.4))
   lines(time, fit)
 })
 with(subset(gmpreds, ramp=="heat" & dom=="D" & time <=42), {
-  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col=alpha("red", 0.5))
+  addpoly(time, uci, lci, col=alpha("red", 0.4))
   lines(time, fit)
 })
 
-# Plot raw data +/- standard deviation
-plot(NA, xlim=c(0,63), ylim=c(0,1.1))
-lapply(datlist[["cool"]], function(dom) {
-  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
-         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
-  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
-})
-plot(NA, xlim=c(0,63), ylim=c(0,1.1))
-mod <- gamm4(rfvfm ~ s(time, k=5), random=~(1|mother/sample), data=subset(data, ramp=="heat" & dom=="C"))
-modp <- data.frame(predict(mod$gam, data.frame(time=seq(0,63,1)), re.form=NA, se.fit=T))
-addpoly(seq(0,63,1), modp$fit+1.96*modp$se.fit, modp$fit-1.96*modp$se.fit, col="red")
-mod <- gamm4(rfvfm ~ s(time, k=5), random=~(1|mother/sample), data=subset(data, ramp=="heat" & dom=="D"))
-modp <- data.frame(predict(mod$gam, data.frame(time=seq(0,63,1)), re.form=NA, se.fit=T))
-addpoly(seq(0,63,1), modp$fit+1.96*modp$se.fit, modp$fit-1.96*modp$se.fit, col="pink")
-mod <- gamm4(rfvfm ~ s(time, by=dom, k=5) + dom, random=~(1|mother/sample), data=subset(data, ramp=="heat"))
-preddf <- expand.grid(time=seq(0,63,1), dom=c("C","D"))
-modp <- data.frame(cbind(preddf, predict(mod$gam, preddf, re.form=NA, se.fit=T)))
-with(subset(modp, dom=="C"), {
-  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col="blue")
-  lines(time, fit)
-})
-with(subset(modp, dom=="D"), {
-  addpoly(time, fit+1.96*se.fit, fit-1.96*se.fit, col="red")
-  lines(time, fit)
-})
-
-lapply(datlist[["heat"]], function(dom) {
-  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
-         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
-  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
-})
 
 
 
-# Analyze total S/H ratio using linear mixed models S/H ANALYSIS ------------
+# -----
+Dt3 <- gmpreds[214,]
+Ct3 <- gmpreds[86,]
+Ct3
+Dt3
+t.test()
+?t.test
+
+
+
+
+# Analyze total S/H ratio using linear mixed models ------------
 # analyse SH ratios with time as discrete factor (not enough temporal resolution to model as continuous)
 # get SH data frame and plot raw data
 shdf <- droplevels(subset(data, !is.na(tot.SH)))
@@ -302,11 +310,3 @@ for (j in 2:nrow(df)) {
 }
 text(par("usr")[1], 0.5, labels=expression(bold("B. Heating")), adj=0, xpd=NA)
 dev.off()
-
-# Analyze Fv/Fm vs. propD?
-mod <- lmerTest::lmer(fvfm ~ poly(time, 2) * ramp * propD + (1|mother/sample), data=data)
-anova(mod, test="F") 
-lmerTest::anova(mod)
-plot(Effect(c("time", "ramp", "propD"), mod))
-
-xyplot(fvfm ~ propD | time + ramp, data=data)
