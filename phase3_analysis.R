@@ -43,74 +43,25 @@ for (sample in data$sample) {
   data[which(data$sample==sample), "rfvfm"] <- sdata[, "rfvfm"]
 }
 
-# Analyze Fv/Fm using linear mixed models ---------
+# Analyze Fv/Fm -----
 # Visualize all data
-#xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
-
-# Fit mixed model
-mod.all <- lmerTest::lmer(rfvfm ~ poly(time, 2) * ramp * dom + (1|mother/sample), data=data)
-anovatab <- lmerTest::anova(mod.all)
-anovatab
-
-# Test C vs. D differences at each date using model fit
-rg <- ref.grid(mod.all, at=list(time=c(0,7,14,21,28,35,42,49,56,63)))
-lsm <- lsmeans(rg, specs=pairwise ~ dom | ramp * time)  # CORRECT FOR MULTIPLE TESTING?
-pvals <- summary(rbind(contrast(lsm, "tukey", adjust="mvt")))
-fvfmsigs <- pvals[which(pvals$p.value < 0.01), ]
-fvfmsigs
-write.csv(round(anovatab, digits=3), file="output/Table1.csv")
-# Pseudo-r2 value-- squared correlation between fitted and observed values
-summary(lm(model.response(model.frame(mod.all)) ~ fitted(mod.all)))$r.squared
-# Generate predictions and confidence intervals by parametric bootstrapping
-pred.all <- expand.grid(time=seq(0,63,1), ramp=factor(c("cool", "heat")), dom=factor(c("C", "D")))
-bootfit <- bootMer(mod.all, FUN=function(x) predict(x, pred.all, re.form=NA), nsim=100)
-# Extract 95% confidence interval on predicted values
-pred.all$fit <- predict(mod.all, pred.all, re.form=NA)
-pred.all$lci <- apply(bootfit$t, 2, quantile, 0.025)
-pred.all$uci <- apply(bootfit$t, 2, quantile, 0.975)
-# Prepare data for plotting
-datsumm <- data.frame(
-  colsplit(as.character(levels(droplevels(interaction(data$dom, data$ramp, data$time)))),
-           pattern="\\.", names=c("dom", "ramp", "time")),
-  mean=aggregate(data$rfvfm, by=list(interaction(data$dom, data$ramp, data$time)), FUN=mean, na.rm=T)$x,
-  sd=aggregate(data$rfvfm, by=list(interaction(data$dom, data$ramp, data$time)), FUN=sd, na.rm=T)$x,
-  se=aggregate(data$rfvfm, by=list(interaction(data$dom, data$ramp, data$time)), 
-               FUN=function(x) sd(x, na.rm=T)/sqrt(length(na.omit(x))))$x,
-  conf95=aggregate(data$rfvfm, by=list(interaction(data$dom, data$ramp, data$time)), 
-                   FUN=function(x) sd(x, na.rm=T)/sqrt(length(na.omit(x))) * qt(0.975, length(na.omit(x))-1))$x
-  )
-datlist <- split(datsumm, f=datsumm$ramp)
-datlist <- lapply(datlist, function(x) rev(split(x, f=x$dom)))
-predlist <- split(pred.all, f=pred.all$ramp)
-predlist <- lapply(predlist, function(x) rev(split(x, f=x$dom))) 
-predlist$heat$C <- predlist$heat$C[predlist$heat$C$time <= 42, ]
-predlist$heat$D <- predlist$heat$D[predlist$heat$D$time <= 42, ]
-
-# Test differences between C and D at each time point for each treatment using mixed model
-mod <- lmer(rfvfm ~ factor(time) * dom + (1|mother), data=subset(data, ramp=="heat"))
-lsm <- lsmeans(mod, specs=c("dom", "time"))
-tests <- pairs(lsm, by="time")
-rbind(tests)
-## Many significant differences
-
-
-# Analyze Fv/Fm using GAM -----
-gm <- gamm4(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=~(1|mother/sample), data=data)
+# xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
+# Fit Generalized Additive Mixed Model (GAMM) to Fv/Fm data
 gm <- gamm(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=list(mother=~1, sample=~1), data=data)
 pdat <- rbind(expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D"))),
               expand.grid(time=seq(0,42,1), ramp=factor("heat"), dom=factor(c("C","D"))))
-# Predict values and SEs
+# Get predicted values
 gmpreds <- data.frame(cbind(pdat, predict(gm$gam, pdat, re.form=NA, se.fit=T)))
-# Simulate from posterior distribution of beta
+# Simulate predicted values from posterior distribution of beta 1000 times
 set.seed(789)
 Rbeta <- mvrnorm(n = 1000, coef(gm$gam), vcov(gm$gam))
 Xp <- predict(gm$gam, newdata = pdat, type = "lpmatrix")
 sim <- Xp %*% t(Rbeta)
-# Extract 95% confidence intervals of simulated values
+# Extract 95% confidence intervals of simulated values for plotting
 gmpreds$lci <- apply(sim, 1, quantile, 0.025)
 gmpreds$uci <- apply(sim, 1, quantile, 0.975)
 
-# Calculate 95% confidence interval on difference between C and D corals at certain dates
+# Calculate 95% confidence interval on difference between C and D corals at select dates (=sampling dates)
 sim1 <- cbind(pdat, sim)
 sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
 sim1split <- split(sim1, f=interaction(sim1$time, sim1$ramp, drop=T))
@@ -119,55 +70,11 @@ CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, di
 test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
 test0[test0==F]  # Shows when C and D are significantly different with p<0.05
 
-# Plot predictions and CIs -----
-plot(NA, xlim=c(0,63), ylim=c(0,1.1))
-lapply(datlist[["cool"]], function(dom) {
-  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
-         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
-  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
-})
-with(subset(gmpreds, ramp=="cool" & dom=="C"), {
-  addpoly(time, uci, lci, col=alpha("blue", 0.4))
-  lines(time, fit)
-})
-with(subset(gmpreds, ramp=="cool" & dom=="D"), {
-  addpoly(time, uci, lci, col=alpha("red", 0.4))
-  lines(time, fit)
-})
-plot(NA, xlim=c(0,63), ylim=c(0,1.1))
-lapply(datlist[["heat"]], function(dom) {
-  arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
-         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
-  points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
-})
-with(subset(gmpreds, ramp=="heat" & dom=="C" & time <=42), {
-  addpoly(time, uci, lci, col=alpha("blue", 0.4))
-  lines(time, fit)
-})
-with(subset(gmpreds, ramp=="heat" & dom=="D" & time <=42), {
-  addpoly(time, uci, lci, col=alpha("red", 0.4))
-  lines(time, fit)
-})
-
-
-
-
-# -----
-Dt3 <- gmpreds[214,]
-Ct3 <- gmpreds[86,]
-Ct3
-Dt3
-t.test()
-?t.test
-
-
-
-
-# Analyze total S/H ratio using linear mixed models ------------
+# Analyze total S/H ratio ------------
 # analyse SH ratios with time as discrete factor (not enough temporal resolution to model as continuous)
 # get SH data frame and plot raw data
 shdf <- droplevels(subset(data, !is.na(tot.SH)))
-xyplot(log10(tot.SH) ~ time | ramp + dom, groups= ~ sample, data = shdf, type="o", lty=1)
+#xyplot(log10(tot.SH) ~ time | ramp + dom, groups= ~ sample, data = shdf, type="o", lty=1)
 # create list split by dom&ramp, fit mixed model for each group
 shl <- split(shdf, f=interaction(shdf$ramp, shdf$dom))
 mods <- llply(shl, function(df) lmerTest::lmer(log10(tot.SH) ~ factor(time) + (1|mother/sample), data=df))
@@ -186,20 +93,31 @@ geostats <- split(geostats, f=geostats$.id)
 geostats
 
 # Figure 1: Fv/Fm and total S/H under (A.) cooling and (B.) heating -------------
+# Prepare raw Fv/Fm data for plotting (calculate mean and sd)
+datsumm <- data.frame(
+  colsplit(as.character(levels(droplevels(interaction(data$dom, data$ramp, data$time)))),
+           pattern="\\.", names=c("dom", "ramp", "time")),
+  mean=aggregate(data$rfvfm, by=list(interaction(data$dom, data$ramp, data$time)), FUN=mean, na.rm=T)$x,
+  sd=aggregate(data$rfvfm, by=list(interaction(data$dom, data$ramp, data$time)), FUN=sd, na.rm=T)$x)
+datlist <- split(datsumm, f=datsumm$ramp)
+datlist <- lapply(datlist, function(x) rev(split(x, f=x$dom)))
+# Create figure
 pdf(file = "output/Figure1.pdf", width=6.85, height=3.425)
 layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
-par(mgp=c(1.5,0.25,0), tck=-0.06)
+par(mgp=c(1.5,0.25,0), tck=-0.06, xpd=NA)
 # Cooling Fv/Fm
 par(mar=c(1,3,4,1))
 plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=-0.03,
      xaxt="n", ann=F)
 title("A. Cooling", adj=0)
 mtext(side=2, text="Relative Fv/Fm", cex=0.75, line=1.5)
-with(predlist[["cool"]], {
-  lapply(predlist[["cool"]], function(dom) {
-    addpoly(dom$time, dom$lci, dom$uci, col=alpha(list("C"="blue", "D"="red")[[dom$dom[1]]], 0.2), xpd=NA)
-    lines(dom$time, dom$fit, lty=1)
-  })
+with(subset(gmpreds, ramp=="cool" & dom=="C"), {
+  addpoly(time, uci, lci, col=alpha("blue", 0.4))
+  lines(time, fit)
+})
+with(subset(gmpreds, ramp=="cool" & dom=="D"), {
+  addpoly(time, uci, lci, col=alpha("red", 0.4))
+  lines(time, fit)
 })
 # Plot raw data +/- standard deviation
 lapply(datlist[["cool"]], function(dom) {
@@ -229,14 +147,16 @@ with(geostats$cool.D, {
 # Heating Fv/Fm
 par(mar=c(1,3,4,1))
 plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=-0.03, ylab="fvfm", xlab="days",
-     xaxt="n", ann=F)
+     xaxt="n", ann=F, xpd=NA)
 title("B. Heating", adj=0)
 mtext(side=2, text="Relative Fv/Fm", cex=0.75, line=1.5)
-with(predlist[["heat"]], {
-  lapply(predlist[["heat"]], function(dom) {
-    addpoly(dom$time, dom$lci, dom$uci, col=alpha(list("C"="blue", "D"="red")[[dom$dom[1]]], 0.2), xpd=NA)
-    lines(dom$time, dom$fit, lty=1)
-  })
+with(subset(gmpreds, ramp=="heat" & dom=="C" & time <=42), {
+  addpoly(time, uci, lci, col=alpha("blue", 0.4))
+  lines(time, fit)
+})
+with(subset(gmpreds, ramp=="heat" & dom=="D" & time <=42), {
+  addpoly(time, uci, lci, col=alpha("red", 0.4))
+  lines(time, fit)
 })
 with(fvfmsigs[which(fvfmsigs$ramp=="heat"), ],
      points(time, c(1.1,1.1,1,0.9), pch="*", cex=1.5, xpd=T))
@@ -281,7 +201,7 @@ df1 <- data.frame(time=Clsmeans$time, ramp=Clsmeans$ramp, dom=Clsmeans$dom, Cmea
 # Figure 2: Community dynamics under (A.) cooling and (B.) heating -----
 # Plot mean abundances of C and D over time by treatment and dominant clade at start
 pdf(file="output/Figure2.pdf", width=6.85, height=3.425)
-par(mfrow=c(1,2), mar=c(3,3,2,1), mgp=c(1.5,0.4,0), tcl=-0.3)
+par(mfrow=c(1,2), mar=c(3,3,2,1), mgp=c(1.5,0.4,0), tcl=-0.3, xpd=F)
 df <- subset(df1, ramp=="cool")
 plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", cex.axis=0.75, cex.lab=0.75)
 abline(a=0,b=1,lty=2)
