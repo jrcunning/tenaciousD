@@ -125,8 +125,8 @@ lapply(datlist[["cool"]], function(dom) {
          col=list("C"="blue", "D"="red")[[dom$dom[1]]])
   points(dom$mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
 })
-with(fvfmsigs[which(fvfmsigs$ramp=="cool"), ],
-     points(time, c(1,1,1), pch="*", cex=1.5))
+legend("bottom", legend=c("Corals initially dominated by clade C", "Corals initially dominated by clade D"),
+       pch=21, pt.bg=c("blue","red"), bty="n")
 # Cooling S/H
 par(mar=c(5,3,0,1))
 plot(NA, xlim=c(0,63), ylim=c(-4, 0.5), bty="n", tck=-0.03, ylab="", xlab="", xaxt="n")
@@ -158,8 +158,7 @@ with(subset(gmpreds, ramp=="heat" & dom=="D" & time <=42), {
   addpoly(time, uci, lci, col=alpha("red", 0.4))
   lines(time, fit)
 })
-with(fvfmsigs[which(fvfmsigs$ramp=="heat"), ],
-     points(time, c(1.1,1.1,1,0.9), pch="*", cex=1.5, xpd=T))
+points(c(7,14,21), c(1.1,1.1,1), pch="*", cex=1.5, xpd=T)
 # Plot raw data +/- standard deviation
 lapply(datlist[["heat"]], function(dom) {
   arrows(dom$time, dom$mean + dom$sd, dom$time, dom$mean - dom$sd, code=3, angle=90, length=0.05, xpd=NA,
