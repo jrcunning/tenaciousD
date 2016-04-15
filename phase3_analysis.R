@@ -26,8 +26,8 @@ data$propD <- data$D.SH / (data$C.SH + data$D.SH)
 # Categorize C- and D-dominated corals based on community composition at time zero
 dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample, 
                                                      dom=ifelse(is.na(propD), NA, ifelse(propD > 0.5, "D", "C")))))
-dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample,
-                                                     dom=ifelse(is.na(propD), NA, ifelse(propD > 0.9, "D", ifelse(propD < 0.1, "C", NA))))))
+# dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample,
+#                                                      dom=ifelse(is.na(propD), NA, ifelse(propD > 0.9, "D", ifelse(propD < 0.1, "C", NA))))))
 # Merge dominant symbiont classification with rest of data
 data <- merge(data, dom, by="sample", all.x=T)
 table(data[data$time==0, "dom"])  # 27 C-dominant and 88 D-dominant corals = 115 corals with qPCR data at t0
@@ -51,65 +51,9 @@ for (sample in data$sample) {
   data[which(data$sample==sample), "rfvfm"] <- sdata[, "rfvfm"]
 }
 
-# Test effect of past thermal history on initial Fv/Fm and S/H ratio -----
-fullmod <- lmerTest::lmer(fvfm ~ history * ramp * dom + (1|mother), data=subset(data, time==0))
-fullmod.lsm <- lsmeans::lsmeans(fullmod, specs=c("history","dom", "ramp"))
-tests <- data.frame(summary(pairs(fullmod.lsm, by=c("dom", "ramp"))))
-tests[!is.na(tests$p.value),]  # No significant differences due to thermal history within groups
-
-fullmod <- lmerTest::lmer(log(tot.SH) ~ history * ramp * dom + (1|mother), data=subset(data, time==0))
-fullmod.lsm <- lsmeans::lsmeans(fullmod, specs=c("history","dom", "ramp"))
-tests <- data.frame(summary(pairs(fullmod.lsm, by=c("dom", "ramp"))))
-tests[!is.na(tests$p.value),]  # No significant differences due to thermal history within groups
-
-# TEST EFFECT OF HISTORY ON FVFM AND SH RATIO
-mod <- lmerTest::lmer(rfvfm ~ timef + history + (1|mother/sample), 
-                      data=subset(data, ramp=="heat" & dom=="C")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-mod <- lmerTest::lmer(rfvfm ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="heat" & dom=="D")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-mod <- lmerTest::lmer(rfvfm ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="cool" & dom=="C")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-mod <- lmerTest::lmer(rfvfm ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="cool" & dom=="D")); lmerTest::anova(mod) # YES effect
-mod <- lmerTest::step(mod, reduce.random=F)$model
-modlsm <- lsmeans::lsmeans(mod, specs=c("history"), contr="pairwise")
-# group A* has Fv/Fm values ~0.06 higher than C' and C* under cooling treatment
-with(subset(data, ramp=="cool" & dom=="D"), aggregate(propD, by=list(history), FUN=mean, na.rm=T))
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="heat" & dom=="C")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="heat" & dom=="D")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="cool" & dom=="C")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), 
-                      data=subset(data, ramp=="cool" & dom=="D")); lmerTest::anova(mod) # no effect
-lmerTest::step(mod, reduce.random=F)
-
-table(data$dom, data$history, data$ramp)
-
-Edf <- subset(data, history=="E'")
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * dom + (1|mother/sample), data=Edf)
-lmerTest::anova(mod)
-lmerTest::step(mod)
-plot(Effect(c("timef","dom"), mod))
-
-Bdf <- subset(data, history=="B'")
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * dom + (1|mother/sample), data=Bdf)
-lmerTest::anova(mod)
-plot(Effect(c("timef","dom"), mod))
-
 # Analyze Fv/Fm -----
 # Visualize all data
 # xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
-
-
-
 # Fit Generalized Additive Mixed Model (GAMM) to Fv/Fm data
 gm <- gamm(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=list(mother=~1, sample=~1), data=data)
 pdat <- rbind(expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D"))),
@@ -315,16 +259,3 @@ for (j in 2:nrow(df)) {
 }
 text(par("usr")[1], 0.5, labels=expression(bold("B. Heating")), adj=0, xpd=NA)
 #dev.off()
-
-# -----
-
-
-mod <- gamm(rfvfm ~ s(time, by=history, k=3) + history, data=subset(data, ramp=="heat" & dom=="D"))
-plot(mod)
-summary(mod$gam)
-
-mod <- lmerTest::lmer(rfvfm ~ poly(time, 2) * history + (1|mother/sample), data=subset(data, ramp=="heat" & dom=="D"))
-plot(Effect(c("time", "history"), mod), x.var="time", multiline=T)
-lmerTest::anova(mod, test="F")
-
-
