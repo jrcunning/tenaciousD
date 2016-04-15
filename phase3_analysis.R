@@ -16,7 +16,7 @@ addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
   polygon(c(x, rev(x)), c(y1, rev(y2)), col=col, border=NA, ...)
 }
 
-data <- read.csv("phase3.csv")
+data <- read.csv("phase3_2.csv")
 
 # Adjust and transform data -----
 # Create factor version of time
@@ -264,7 +264,7 @@ Dlsmeans <- summary(Dlsm)
 # Combine into single data frame
 df1 <- data.frame(time=Clsmeans$timef, ramp=Clsmeans$ramp, dom=Clsmeans$dom, Cmean=Clsmeans$lsmean, Dmean=Dlsmeans$lsmean, Cse=Clsmeans$SE, Dse=Dlsmeans$SE)
 
-# Figure 2: Community dynamics under (A.) cooling and (B.) heating -----
+# Figure 2: Mixed community dynamics under (A.) cooling and (B.) heating -----
 # Plot mean abundances of C and D over time by treatment and dominant clade at start
 #pdf(file="output/Figure2.pdf", width=6.85, height=3.425)
 par(mfrow=c(1,2), mar=c(3,3,2,1), mgp=c(1.5,0.4,0), tcl=-0.3, xpd=F)
@@ -291,6 +291,58 @@ arrows(df$Dmean+df$Dse, df$Cmean, df$Dmean-df$Dse, df$Cmean, length=0.025, angle
 for (j in 2:nrow(df)) {
   if (as.numeric(df$time)[j] > as.numeric(df$time)[j-1]) {
     arrows(df$Dmean[j-1], df$Cmean[j-1], df$Dmean[j], df$Cmean[j], length=0.1, code=2, lwd=2,
+           col=c("blue","red","green")[df$dom[j]])
+  }
+}
+text(par("usr")[1], 0.5, labels=expression(bold("B. Heating")), adj=0, xpd=NA)
+#dev.off()
+
+# Modeling both C and D responses together -----
+df <- data[!is.na(data$tot.SH), ]
+df2 <- melt(df, id.vars=c(1:6,9:13), value.name="SH")
+colnames(df2)[colnames(df2)=="variable"] <- "clade"
+# Fit model for cooling treatment
+coolmod <- lmerTest::lmer(log10(SH) ~ timef * dom * clade + (timef+dom+clade|mother/sample), 
+                          data=subset(df2, ramp=="cool"))
+coolmod.lsm <- data.frame(summary(lsmeans(coolmod, specs=c("clade", "timef", "dom"))))
+# Fit model for heating treatment
+heatmod <- lmerTest::lmer(log10(SH) ~ timef * dom * clade + (timef+dom+clade|mother/sample), 
+                          data=subset(df2, ramp=="heat"))
+heatmod.lsm <- data.frame(summary(lsmeans(heatmod, specs=c("clade", "timef", "dom"))))
+
+# Figure 2 ALT: Mixed community dynamics under (A.) cooling and (B.) heating -----
+# Plot mean abundances of C and D over time by treatment and dominant clade at start
+#pdf(file="output/Figure2.pdf", width=6.85, height=3.425)
+par(mfrow=c(1,2), mar=c(3,3,2,1), mgp=c(1.5,0.4,0), tcl=-0.3, xpd=F)
+df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
+df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
+df$D.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
+df <- with(df, df[order(dom, timef), ])
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", cex.axis=0.75, cex.lab=0.75)
+abline(a=0,b=1,lty=2)
+arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
+arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
+for (j in 2:nrow(df)) {
+  if (as.numeric(df$time)[j] > as.numeric(df$time)[j-1]) {
+    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=2,
+           col=c("blue","red","green")[df$dom[j]])
+  }
+}
+text(par("usr")[1], 0.5, labels=expression(bold("A. Cooling")), adj=0, xpd=NA)
+legend("bottomright", legend=c("C-dominated", "D-dominated"), 
+       lty=1, lwd=2, col=c("blue","red","green"), inset=0.05, cex=0.75, bty="n")
+
+df <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="lsmean")
+df$C.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
+df$D.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
+df <- with(df, df[order(dom, timef), ])
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", cex.axis=0.75, cex.lab=0.75)
+abline(a=0,b=1,lty=2)
+arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
+arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
+for (j in 2:nrow(df)) {
+  if (as.numeric(df$time)[j] > as.numeric(df$time)[j-1]) {
+    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=2,
            col=c("blue","red","green")[df$dom[j]])
   }
 }
