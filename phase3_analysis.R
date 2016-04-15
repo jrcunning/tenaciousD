@@ -51,6 +51,43 @@ for (sample in data$sample) {
   data[which(data$sample==sample), "rfvfm"] <- sdata[, "rfvfm"]
 }
 
+# Test for effect of clade in corals with same history -----
+# Do any corals in either treatment have same history but different dominant clade?
+table(data$history, data$dom, data$ramp)  # Yes: history B' in heating and E' in cooling
+# Test if corals with same history showed different responses based on dominant clade
+
+# History E' (DCMU-24-ctrl-24) in cooling treatment
+Edf <- subset(data, history=="E'" & ramp=="cool")
+table(unique(Edf[,c("sample", "dom")])$dom)  # 7 corals with Cdom, 4 corals with Ddom
+mod <- lmerTest::lmer(rfvfm ~ timef * dom + (1|mother/sample), data=Edf)
+lmerTest::anova(mod)  # clade does not impact Fv/Fm
+plot(Effect(c("timef", "dom"), mod))
+mod <- lmerTest::lmer(log(tot.SH) ~ timef * dom + (1|mother/sample), data=Edf)
+lmerTest::anova(mod)  # clade marginally impacts totSH
+plot(Effect(c("timef", "dom"), mod))
+
+# History B' (ctrl-29-ctrl-29) in heating treatment
+Bdf <- subset(data, history=="B'" & ramp=="heat")
+table(unique(Bdf[,c("sample", "dom")])$dom)  # 6 corals with Cdom, 4 corals with Ddom
+mod <- lmerTest::lmer(rfvfm ~ timef * dom + (1|mother/sample), data=Bdf)
+lmerTest::anova(mod) # clade does not impact Fv/Fm
+plot(Effect(c("timef", "dom"), mod))
+mod <- lmerTest::lmer(log(tot.SH) ~ timef * dom + (1|mother/sample), data=Bdf)
+lmerTest::anova(mod)
+plot(Effect(c("timef", "dom"), mod))  # clade strongly impacts totSH
+
+# Test for effect of history in corals with same clade -----
+# Do any corals have the same clade but different history?
+table(data$dom, data$history, data$ramp) #Yes, cooling Cdom, A' (ctrl-24-ctrl-24) vs. E' (DCMU-24-ctrl-24)
+df <- droplevels(subset(data, ramp=="cool" & dom=="C"))
+table(unique(df[,c("sample","history")])$history) # 3 corals A', 7 corals E'
+mod <- lmerTest::lmer(rfvfm ~ timef * history + (1|mother/sample), data=df)
+lmerTest::anova(mod)  # no impact of history on fv/fm
+plot(Effect(c("timef", "history"), mod))
+mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), data=df)
+lmerTest::anova(mod)  # no impact of history on totSH
+plot(Effect(c("timef", "history"), mod))
+
 # Analyze Fv/Fm -----
 # Visualize all data
 # xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
