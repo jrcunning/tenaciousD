@@ -92,7 +92,8 @@ plot(Effect(c("timef", "history"), mod))
 # Visualize all data
 # xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
 # Fit Generalized Additive Mixed Model (GAMM) to Fv/Fm data
-gm <- gamm(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=list(mother=~1, sample=~1), data=data)
+fvfmdata <- data[!is.na(data$rfvfm), ]
+gm <- gamm(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=list(mother=~1, sample=~1), data=fvfmdata)
 pdat <- rbind(expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D"))),
               expand.grid(time=seq(0,42,1), ramp=factor("heat"), dom=factor(c("C","D"))))
 # Get predicted values
@@ -117,8 +118,9 @@ test0[test0==F]  # Shows when C and D are significantly different with p<0.05
 
 # Analyze total S/H ratio ------------
 # Fit model for cooling treatment and test for effect of past thermal history
+shdata <- data[!is.na(data$tot.SH), ]
 coolSHmod <- lmerTest::lmer(log10(tot.SH) ~ timef * dom * history + (1|mother/sample), 
-                            data=subset(data, ramp=="cool"))
+                            data=subset(shdata, ramp=="cool"))
 lmerTest::anova(coolSHmod)
 coolSHlsm <- lsmeans::lsmeans(coolSHmod, specs=c("timef", "history", "dom"), by=c("dom", "timef"))
 hist.pw <- data.frame(summary(pairs(coolSHlsm))); na.omit(hist.pw)
@@ -126,7 +128,7 @@ hist.pw[which(hist.pw$p.value < 0.01), ]  # No contrasts are significant at alph
 coolSHmod <- update(coolSHmod, formula=~timef * dom + (1|mother/sample)) # remove history from model
 # Fit model for heating treatment and test for effect of past thermal history
 heatSHmod <- lmerTest::lmer(log10(tot.SH) ~ timef * dom * history + (1|mother/sample), 
-                            data=subset(data, ramp=="heat"))
+                            data=subset(shdata, ramp=="heat"))
 lmerTest::anova(heatSHmod)
 heatSHlsm <- lsmeans::lsmeans(heatSHmod, specs=c("timef", "history", "dom"), by=c("dom", "timef"))
 hist.pw <- data.frame(summary(pairs(heatSHlsm))); na.omit(hist.pw)
