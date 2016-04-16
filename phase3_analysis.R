@@ -88,8 +88,8 @@ mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), data=df
 lmerTest::anova(mod)  # no impact of history on totSH
 plot(Effect(c("timef", "history"), mod))
 
-# Analyze Fv/Fm
-# cooling FvFmGAMM----------
+# Analyze Fv/Fm -----
+# Cooling treatment
 gm.cool <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
                 data=subset(data, ramp=="cool"), na.action=na.omit)
 pdat.cool <- expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D")))
@@ -108,10 +108,10 @@ sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
 sim1split <- split(sim1, f=sim1$time, drop=T)
 CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, diff), c(0.025, 0.975)))
 # Test if 95% CI on difference between C and D corals contains zero
-test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
-test0[test0==F]  # Shows when C and D are significantly different with p<0.05
+cool.test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
+cool.test0[cool.test0==F]  # Shows when C and D are significantly different with p<0.05
 
-# heating FvFmGAMM -------------
+# Heating treatment
 gm.heat <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
                 data=subset(data, ramp=="heat"), na.action=na.omit)
 pdat.heat <- expand.grid(time=seq(0,42,1), ramp=factor("heat"), dom=factor(c("C", "D")))
@@ -130,35 +130,8 @@ sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
 sim1split <- split(sim1, f=sim1$time, drop=T)
 CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, diff), c(0.025, 0.975)))
 # Test if 95% CI on difference between C and D corals contains zero
-test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
-test0[test0==F]  # Shows when C and D are significantly different with p<0.05
-
-# Analyze Fv/Fm -----
-# Visualize all data
-# xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
-# Fit Generalized Additive Mixed Model (GAMM) to Fv/Fm data
-gm <- gamm(rfvfm ~ ramp + dom + s(time, by=interaction(ramp, dom), k=5), random=list(mother=~1, sample=~1), data=data, na.action=na.omit)
-pdat <- rbind(expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D"))),
-              expand.grid(time=seq(0,42,1), ramp=factor("heat"), dom=factor(c("C","D"))))
-# Get predicted values
-gmpreds <- data.frame(cbind(pdat, predict(gm$gam, pdat, re.form=NA, se.fit=T)))
-# Simulate predicted values from posterior distribution of beta 1000 times
-set.seed(789)
-Rbeta <- mvrnorm(n = 1000, coef(gm$gam), vcov(gm$gam))
-Xp <- predict(gm$gam, newdata = pdat, type = "lpmatrix")
-sim <- Xp %*% t(Rbeta)
-# Extract 95% confidence intervals of simulated values for plotting
-gmpreds$lci <- apply(sim, 1, quantile, 0.025)
-gmpreds$uci <- apply(sim, 1, quantile, 0.975)
-
-# Calculate 95% confidence interval on difference between C and D corals at select dates (=sampling dates)
-sim1 <- cbind(pdat, sim)
-sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
-sim1split <- split(sim1, f=interaction(sim1$time, sim1$ramp, drop=T))
-CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, diff), c(0.025, 0.975)))
-# Test if 95% CI on difference between C and D corals contains zero
-test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
-test0[test0==F]  # Shows when C and D are significantly different with p<0.05
+heat.test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
+heat.test0[heat.test0==F]  # Shows when C and D are significantly different with p<0.05
 
 # Analyze total S/H ratio ------------
 # Fit model for cooling treatment and test for effect of past thermal history
@@ -220,6 +193,7 @@ with(subset(gm.cool.pred, dom=="D"), {
   addpoly(time, uci, lci, col=alpha("red", 0.4))
   lines(time, fit)
 })
+points(c(21,28,35,42), c(1,0.97,0.94,0.91), pch="*", cex=2, xpd=T)
 # Plot raw data +/- standard deviation
 lapply(datlist[["cool"]], function(dom) {
   arrows(dom$time, dom$rfvfm.mean + dom$rfvfm.sd, dom$time, dom$rfvfm.mean - dom$rfvfm.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -250,6 +224,7 @@ for (i in 1:nrow(cool.diff)) {
     text(day[i], with(datlist[["cool"]][[dom]], logtot.SH.mean[time==day[i]]), labels=loss[i], pos=c(2,2,2)[i])
   })
 }
+
      
 # Heating Fv/Fm
 par(mar=c(1,3,4,1))
