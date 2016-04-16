@@ -88,6 +88,51 @@ mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), data=df
 lmerTest::anova(mod)  # no impact of history on totSH
 plot(Effect(c("timef", "history"), mod))
 
+# Analyze Fv/Fm
+# cooling FvFmGAMM----------
+gm.cool <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
+                data=subset(data, ramp=="cool"), na.action=na.omit)
+pdat.cool <- expand.grid(time=seq(0,63,1), ramp=factor("cool"), dom=factor(c("C", "D")))
+gm.cool.pred <- data.frame(cbind(pdat.cool, fit=predict(gm.cool$gam, pdat.cool)))
+# Simulate predicted values from posterior distribution of beta 1000 times
+set.seed(789)
+Rbeta <- mvrnorm(n = 1000, coef(gm.cool$gam), vcov(gm.cool$gam))
+Xp <- predict(gm.cool$gam, newdata = pdat.cool, type = "lpmatrix")
+sim <- Xp %*% t(Rbeta)
+# Extract 95% confidence intervals of simulated values for plotting
+gm.cool.pred$lci <- apply(sim, 1, quantile, 0.025)
+gm.cool.pred$uci <- apply(sim, 1, quantile, 0.975)
+# Calculate 95% confidence interval on difference between C and D corals at select dates (=sampling dates)
+sim1 <- cbind(pdat.cool, sim)
+sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
+sim1split <- split(sim1, f=sim1$time, drop=T)
+CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, diff), c(0.025, 0.975)))
+# Test if 95% CI on difference between C and D corals contains zero
+test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
+test0[test0==F]  # Shows when C and D are significantly different with p<0.05
+
+# heating FvFmGAMM -------------
+gm.heat <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
+                data=subset(data, ramp=="heat"), na.action=na.omit)
+pdat.heat <- expand.grid(time=seq(0,42,1), ramp=factor("heat"), dom=factor(c("C", "D")))
+gm.heat.pred <- data.frame(cbind(pdat.heat, fit=predict(gm.heat$gam, pdat.heat)))
+# Simulate predicted values from posterior distribution of beta 1000 times
+set.seed(789)
+Rbeta <- mvrnorm(n = 1000, coef(gm.heat$gam), vcov(gm.heat$gam))
+Xp <- predict(gm.heat$gam, newdata = pdat.heat, type = "lpmatrix")
+sim <- Xp %*% t(Rbeta)
+# Extract 95% confidence intervals of simulated values for plotting
+gm.heat.pred$lci <- apply(sim, 1, quantile, 0.025)
+gm.heat.pred$uci <- apply(sim, 1, quantile, 0.975)
+# Calculate 95% confidence interval on difference between C and D corals at select dates (=sampling dates)
+sim1 <- cbind(pdat.heat, sim)
+sim1 <- sim1[sim1$time %in% c(0,7,14,21,28,35,42,49,56,63), ]
+sim1split <- split(sim1, f=sim1$time, drop=T)
+CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, diff), c(0.025, 0.975)))
+# Test if 95% CI on difference between C and D corals contains zero
+test0 <- lapply(CDdiff.95CI, function(x) x[1] < 0 & 0 < x[2])
+test0[test0==F]  # Shows when C and D are significantly different with p<0.05
+
 # Analyze Fv/Fm -----
 # Visualize all data
 # xyplot(rfvfm ~ time | ramp + dom, groups= ~ sample, data = data, type="o", lty=1)
@@ -167,11 +212,11 @@ plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=-0.03,
      xaxt="n", ann=F)
 title("A. Cooling", adj=0)
 mtext(side=2, text="Relative Fv/Fm", cex=0.75, line=1.5)
-with(subset(gmpreds, ramp=="cool" & dom=="C"), {
+with(subset(gm.cool.pred, dom=="C"), {
   addpoly(time, uci, lci, col=alpha("blue", 0.4))
   lines(time, fit)
 })
-with(subset(gmpreds, ramp=="cool" & dom=="D"), {
+with(subset(gm.cool.pred, dom=="D"), {
   addpoly(time, uci, lci, col=alpha("red", 0.4))
   lines(time, fit)
 })
@@ -212,11 +257,11 @@ plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=-0.03, ylab="fvfm", xlab="days
      xaxt="n", ann=F, xpd=NA)
 title("B. Heating", adj=0)
 mtext(side=2, text="Relative Fv/Fm", cex=0.75, line=1.5)
-with(subset(gmpreds, ramp=="heat" & dom=="C" & time <=42), {
+with(subset(gm.heat.pred, dom=="C" & time <=42), {
   addpoly(time, uci, lci, col=alpha("blue", 0.4))
   lines(time, fit)
 })
-with(subset(gmpreds, ramp=="heat" & dom=="D" & time <=42), {
+with(subset(gm.heat.pred, dom=="D" & time <=42), {
   addpoly(time, uci, lci, col=alpha("red", 0.4))
   lines(time, fit)
 })
