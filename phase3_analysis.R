@@ -92,7 +92,7 @@ datsumm$logtot.SH.sd <- aggregate(log10(data$tot.SH), by=list(interaction(data$t
 datlist <- split(datsumm, f=datsumm$ramp)
 datlist <- lapply(datlist, function(x) rev(split(x, f=x$dom)))
 # Create figure
-#pdf(file = "output/Figure1.pdf", width=6.85, height=3.425)
+pdf(file = "output/Figure1.pdf", width=6.85, height=6.85)
 layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
 par(mgp=c(1.5,0.25,0), tck=-0.06, xpd=NA)
 # Cooling Fv/Fm
@@ -187,7 +187,7 @@ for (i in 1:nrow(heat.diff)) {
     text(day[i], with(datlist[["heat"]][[dom]], logtot.SH.mean[time==day[i]]), labels=loss[i], pos=c(2,2,2)[i])
   })
 }
-#dev.off()
+dev.off()
 
 # Modeling C and D responses together -----
 df <- data[!is.na(data$tot.SH), ]
@@ -215,7 +215,7 @@ heatmod.lsm <- data.frame(summary(heatmod.lsm))
 
 # Figure 2: Mixed community dynamics under (A.) cooling and (B.) heating -----
 # Plot mean abundances of C and D over time by treatment and dominant clade at start
-#pdf(file="output/Figure2.pdf", width=6.85, height=3.425)
+pdf(file="output/Figure2.pdf", width=6.85, height=3.425)
 par(mfrow=c(1,2), mar=c(3,3,2,1), mgp=c(1.5,0.4,0), tcl=-0.3, xpd=F)
 df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
@@ -270,4 +270,4 @@ arrows(x0=xx[-3], y0=-0.4, x1=xx[-1], code=2, length=0.07, lwd=1.5, col="red")
 text(xx, -0.6, labels=c(29,33,35), cex=0.7, adj=c(0.5, 0.35))
 text(-5.5, c(-0.2, -0.4, -0.6), labels=c("C-dom.", "D-dom.", "°C"), cex=0.75, adj=c(0.5, 0.35))
 rect(-6,-0.75,-3.8,0)
-#dev.off()
+dev.off()
