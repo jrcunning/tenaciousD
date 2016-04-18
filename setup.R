@@ -18,7 +18,7 @@ addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
 }
 
 # Import data
-data <- read.csv("phase3_2.csv")
+data <- read.csv("tenaciousD_data.csv")
 
 # Adjust and transform data -----
 # Create factor version of time
