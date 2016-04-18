@@ -1,95 +1,10 @@
-# LOAD DATA AND LIBRARIES -----
-library(lme4)
-library(scales)
-library(lsmeans)
-library(reshape2)
-library(plyr)
-library(lattice)
+# Analysis script for tenaciousD
+# Silverstein RN, Cunning R, Baker AC
 
-# Define function to use for plotting confidence intervals
-addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
-  ii <- order(x)
-  y1 <- y1[ii]
-  y2 <- y2[ii]
-  x <- x[ii]
-  polygon(c(x, rev(x)), c(y1, rev(y2)), col=col, border=NA, ...)
-}
-
-# Import data
-data <- read.csv("phase3_2.csv")
-
-# Adjust and transform data -----
-# Create factor version of time
-data$timef <- factor(data$time)
-# Calculate proportion D in each sample
-data$propD <- data$D.SH / (data$C.SH + data$D.SH)
-# Categorize C- and D-dominated corals based on community composition at time zero
-dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample, 
-                                                     dom=ifelse(is.na(propD), NA, ifelse(propD > 0.5, "D", "C")))))
-# Merge dominant symbiont classification with rest of data
-data <- merge(data, dom, by="sample", all.x=T)
-table(data[data$time==0, "dom"])  # 27 C-dominant and 88 D-dominant corals = 115 corals with qPCR data at t0
-data <- data[with(data, order(sample, time)), ]
-# Keep only those corals with data at time zero
-data <- data[!is.na(data$dom),]
-# Replace zeros with detection limits (just below minimum detected value)
-table(data$C.SH==0) # 23% of samples had no detectable clade C
-table(data$D.SH==0) # 11% of samples had no detectable clade D
-min(data[data$C.SH!=0,"C.SH"], na.rm=T) # detection limit for C is ~1e-6
-min(data[data$D.SH!=0,"D.SH"], na.rm=T) # detection limit for D is ~1e-4
-data[data$C.SH==0 & !is.na(data$C.SH), "C.SH"] <- 1e-6
-data[data$D.SH==0 & !is.na(data$D.SH), "D.SH"] <- 1e-4
-data$tot.SH <- data$C.SH + data$D.SH
-data[data$tot.SH<0.000101 & !is.na(data$tot.SH), "tot.SH"] <- 0.000101
-# Calculate relative change in Fv/Fm
-for (sample in data$sample) {
-  sdata <- data[which(data$sample==sample), ]
-  for (time in sdata$time) {
-    sdata[which(sdata$time==time), "rfvfm"] <- sdata[which(sdata$time==time), "fvfm"] / sdata[which(sdata$time==0), "fvfm"]
-    }
-  data[which(data$sample==sample), "rfvfm"] <- sdata[, "rfvfm"]
-}
-
-# Test for effect of clade in corals with same history -----
-# Do any corals in either treatment have same history but different dominant clade?
-table(data$history, data$dom, data$ramp)  # Yes: history B' in heating and E' in cooling
-# Test if corals with same history showed different responses based on dominant clade
-
-# History E' (DCMU-24-ctrl-24) in cooling treatment
-Edf <- subset(data, history=="E'" & ramp=="cool")
-table(unique(Edf[,c("sample", "dom")])$dom)  # 7 corals with Cdom, 4 corals with Ddom
-mod <- lmerTest::lmer(rfvfm ~ timef * dom + (1|mother/sample), data=Edf, na.action=na.omit)
-lmerTest::anova(mod)  # clade does not impact Fv/Fm
-plot(Effect(c("timef", "dom"), mod))
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * dom + (1|mother/sample), data=Edf, na.action=na.omit)
-lmerTest::anova(mod)  # clade marginally impacts totSH
-plot(Effect(c("timef", "dom"), mod))
-
-# History B' (ctrl-29-ctrl-29) in heating treatment
-Bdf <- subset(data, history=="B'" & ramp=="heat")
-table(unique(Bdf[,c("sample", "dom")])$dom)  # 6 corals with Cdom, 4 corals with Ddom
-mod <- lmerTest::lmer(rfvfm ~ timef * dom + (1|mother/sample), data=Bdf, na.action=na.omit)
-lmerTest::anova(mod) # clade does not impact Fv/Fm
-plot(Effect(c("timef", "dom"), mod))
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * dom + (1|mother/sample), data=Bdf, na.action=na.omit)
-lmerTest::anova(mod)
-plot(Effect(c("timef", "dom"), mod))  # clade strongly impacts totSH
-
-# Test for effect of history in corals with same clade -----
-# Do any corals have the same clade but different history?
-table(data$dom, data$history, data$ramp) #Yes, cooling Cdom, A' (ctrl-24-ctrl-24) vs. E' (DCMU-24-ctrl-24)
-df <- droplevels(subset(data, ramp=="cool" & dom=="C"))
-table(unique(df[,c("sample","history")])$history) # 3 corals A', 7 corals E'
-mod <- lmerTest::lmer(rfvfm ~ timef * history + (1|mother/sample), data=df, na.action=na.omit)
-lmerTest::anova(mod)  # no impact of history on fv/fm
-plot(Effect(c("timef", "history"), mod))
-mod <- lmerTest::lmer(log(tot.SH) ~ timef * history + (1|mother/sample), data=df, na.action=na.omit)
-lmerTest::anova(mod)  # no impact of history on totSH
-plot(Effect(c("timef", "history"), mod))
+# Import data and prepare for analysis
+source('setup.R')
 
 # Analyze Fv/Fm -----
-finalheat <- subset(data, ramp=="heat" & time==42)
-table(finalheat$dom, finalheat$fvfm)
 # Cooling treatment
 gm.cool <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
                 data=subset(data, ramp=="cool"), na.action=na.omit)
@@ -196,13 +111,15 @@ with(subset(gm.cool.pred, dom=="D"), {
 })
 points(c(21,28,35,42), c(1,0.97,0.94,0.91), pch="*", cex=2, xpd=T)
 # Plot raw data +/- standard deviation
-lapply(datlist[["cool"]], function(dom) {
-  arrows(dom$time, dom$rfvfm.mean + dom$rfvfm.sd, dom$time, dom$rfvfm.mean - dom$rfvfm.sd, code=3, angle=90, length=0.05, xpd=NA,
-         col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+pl <- lapply(datlist[["cool"]], function(dom) {
+  arrows(dom$time[-1], dom$rfvfm.mean[-1] + dom$rfvfm.sd[-1], dom$time[-1], dom$rfvfm.mean[-1] - dom$rfvfm.sd[-1], 
+         code=3, angle=90, length=0.05, xpd=NA, col=list("C"="blue", "D"="red")[[dom$dom[1]]])
   points(dom$rfvfm.mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
 })
 legend("bottom", legend=c("Corals initially dominated by clade C", "Corals initially dominated by clade D"),
        pch=21, pt.bg=c("blue","red"), bty="n")
+
+
 # Cooling S/H
 par(mar=c(5,3,0,1))
 plot(NA, xlim=c(0,63), ylim=c(-4, 0.5), bty="n", tck=-0.03, ylab="", xlab="", xaxt="n")
