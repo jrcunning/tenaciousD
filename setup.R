@@ -19,6 +19,7 @@ addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
 
 # Import data
 data <- read.csv("tenaciousD_data.csv")
+data$prevBleach <- ifelse(data$history %in% c("24A'", "B'", "A'"), "NB", "B")
 
 # Adjust and transform data -----
 # Create factor version of time
