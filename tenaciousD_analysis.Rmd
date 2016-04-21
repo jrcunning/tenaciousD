@@ -6,16 +6,25 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, cache = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, cache = FALSE)
 ```
+
 -----
 
 ## Load libraries and prepare data for analysis
 The "setup.R" script loads required libraries and imports data. Total S/H ratios and proportion clade D are calculated for each sample, and corals are categorized as C-dominated or D-dominated based on their dominant symbiont at time zero. Relative changes in Fv/Fm are calculated for each sample. After sourcing this script, the data are ready to be analyzed.
-
 ```{r run_setup, include=FALSE}
 source("setup.R")
 ```
+
+### Experimental design
+Number of C-dominated and D-dominated coral cores in each treatment
+```{r all_samples}
+n <- with(subset(data, time==0), table(dom, ramp))
+n <- addmargins(n)
+pander(n, style="grid")
+```
+
 -----
 
 ## Analyze Fv/Fm data
@@ -81,7 +90,7 @@ CDdiff.95CI <- lapply(sim1split, function(x) quantile(apply(x[,4:ncol(x)], 2, di
 cool.test0 <- lapply(CDdiff.95CI, FUN=function(x) (x[1] < 0 & 0 < x[2])[[1]])
 t(matrix(cool.test0, dimnames=list(day=names(cool.test0), Ho="C-dom = D-dom")))
 ```
-Relative Fv/Fm is significantly higher (p < 0.05) in C-dominated corals than D-dominated corals at day 21, 28, 35, and 42.
+Relative Fv/Fm is significantly higher (p < 0.05) in C-dominated corals than D-dominated corals on day 7 onwards.
 
 ### Heating treatment
 ```{r heat_gamm}
@@ -250,11 +259,10 @@ The previous analysis was on the total symbiont to host cell ratio, but did not 
 ```{r cool_CD}
 # Rearrange data in order to use clade identity as fixed effect in linear model
 df <- data[!is.na(data$tot.SH), ]
-df2 <- melt(df, id.vars=c(1:6,9:13), value.name="SH")
+df2 <- melt(df, id.vars=c(1:6,9:14), value.name="SH")
 colnames(df2)[colnames(df2)=="variable"] <- "clade"
 # Fit linear mixed model for cooling treatment
-coolmod <- lmerTest::lmer(log10(SH) ~ timef * dom * clade + (timef+dom+clade|mother/sample), 
-                          data=subset(df2, ramp=="cool"))
+coolmod <- lmerTest::lmer(log10(SH) ~ timef * dom * clade + (timef+dom+clade|mother/sample), data=subset(df2, ramp=="cool"))
 print(summary(coolmod), correlation=FALSE)
 # Test for differences across consecutive time points in both clades' S/H ratios
 coolmod.lsm <- lsmeans(coolmod, specs=c("clade", "timef", "dom"))
@@ -263,6 +271,7 @@ coolmod.lsm <- data.frame(summary(coolmod.lsm))
 # Identify significant differences and calculate percent change
 coolmod.sigs <- coolmod.contr[coolmod.contr$p.value < 0.05, ]
 coolmod.sigs$loss <- -(1-10^coolmod.sigs$estimate)
+coolmod.sigs <- cbind(colsplit(coolmod.sigs$contrast, pattern="-", names=c("timef", "start")), coolmod.sigs)
 coolmod.sigs
 ```
 
@@ -280,13 +289,26 @@ abline(a=0,b=1,lty=2)
 arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
 arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
 for (j in 2:nrow(df)) {
-  if (as.numeric(df$time)[j] > as.numeric(df$time)[j-1]) {
-    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=2,
-           col=c("blue","red","green")[df$dom[j]])
+  if (as.numeric(df$timef)[j] > as.numeric(df$timef)[j-1]) {
+    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=2, col=c("blue","red")[df$dom[j]])
   }
 }
-with(df[4, ], text(D.SH, C.SH, labels=expression("" %down%C), adj=c(1,-4), cex=0.7))
-with(df[8, ], text(D.SH, C.SH, labels=expression("" %down%C), adj=c(1.5,-1), cex=0.7))
+
+#df2 <- join(df, coolmod.sigs, c("timef", "dom"))
+#which.sig <- which(rowSums(is.na(df2))==0)
+#for (i in which.sig) {
+#  text(x=(df2[i, "D.SH"] + df2[i-1, "D.SH"]) / 2, y=(df2[i, "C.SH"] + df2[i-1, "C.SH"]) / 2, #labels=bquote(bold(.(substr(df2[i, "clade"], 1, 1)))), cex=0.7)
+#}
+
+df2 <- join(df, coolmod.sigs, c("timef", "dom"))
+df2 <- dcast(df2, timef + dom + C.SH + D.SH ~ clade, value.var="loss")
+colnames(df2) <- c("timef", "dom", "C.SH", "D.SH", "Closs", "Dloss")
+df2 <- with(df2, df2[order(dom, timef), ])
+df2$sig <- ifelse(is.na(df2$Closs), ifelse(is.na(df2$Dloss), "", "D"), ifelse(is.na(df2$Dloss), "C", "CD"))
+which.sig <- which(df2$sig!="")
+for (i in which.sig) {
+  text(x=(df2[i, "D.SH"] + df2[i-1, "D.SH"]) / 2, y=(df2[i, "C.SH"] + df2[i-1, "C.SH"]) / 2, labels=bquote(bold(.(df2[i, "sig"]))), cex=0.7)
+}
 
 xx <- seq(-5,-4,len=4)
 arrows(x0=xx[-4], y0=-0.2, x1=xx[-1], code=2, length=0.07, lwd=1.5, col="blue")
@@ -298,9 +320,12 @@ rect(-6,-0.75,-3.8,0)
 
 ### Heating treatment
 ```{r heat_CD}
+# Rearrange data in order to use clade identity as fixed effect in linear model
+df <- data[!is.na(data$tot.SH), ]
+df2 <- melt(df, id.vars=c(1:6,9:14), value.name="SH")
+colnames(df2)[colnames(df2)=="variable"] <- "clade"
 # Fit linear mixed model for heating treatment
-heatmod <- lmerTest::lmer(log10(SH) ~ timef * dom * clade + (timef+dom+clade|mother/sample), 
-                          data=subset(df2, ramp=="heat"))
+heatmod <- lmerTest::lmer(log10(SH) ~ timef * dom * clade + (timef+dom+clade|mother/sample), data=subset(df2, ramp=="heat"))
 print(summary(heatmod), correlation=FALSE)
 # Test for differences across consecutive time points in both clades' S/H ratios
 heatmod.lsm <- lsmeans(heatmod, specs=c("clade", "timef", "dom"))
@@ -309,6 +334,7 @@ heatmod.lsm <- data.frame(summary(heatmod.lsm))
 # Identify significant differences and calculate percent change
 heatmod.sigs <- heatmod.contr[heatmod.contr$p.value < 0.05, ]
 heatmod.sigs$loss <- -(1-10^heatmod.sigs$estimate)
+heatmod.sigs <- cbind(colsplit(heatmod.sigs$contrast, pattern="-", names=c("timef", "start")), heatmod.sigs)
 heatmod.sigs
 ```
 
@@ -331,10 +357,16 @@ for (j in 2:nrow(df)) {
            col=c("blue","red","green")[df$dom[j]])
   }
 }
-with(df[2, ], text(D.SH, C.SH, labels=expression("" %down%C), adj=c(1.2,-12), cex=0.7))
-with(df[3, ], text(D.SH, C.SH, labels=expression("" %down%C), adj=c(0.55,-4), cex=0.7))
-with(df[5, ], text(D.SH, C.SH, labels=expression("" %down%C), adj=c(0.9,-4.5), cex=0.7))
-with(df[6, ], text(D.SH, C.SH, labels=expression("" %down%D), adj=c(-1,-1.4), cex=0.7))
+
+df2 <- join(df, heatmod.sigs, c("timef", "dom"))
+df2 <- dcast(df2, timef + dom + C.SH + D.SH ~ clade, value.var="loss")
+colnames(df2) <- c("timef", "dom", "C.SH", "D.SH", "Closs", "Dloss")
+df2 <- with(df2, df2[order(dom, timef), ])
+df2$sig <- ifelse(is.na(df2$Closs), ifelse(is.na(df2$Dloss), "", "D"), ifelse(is.na(df2$Dloss), "C", "CD"))
+which.sig <- which(df2$sig!="")
+for (i in which.sig) {
+  text(x=(df2[i, "D.SH"] + df2[i-1, "D.SH"]) / 2, y=(df2[i, "C.SH"] + df2[i-1, "C.SH"]) / 2, labels=bquote(bold(.(df2[i, "sig"]))), cex=0.7)
+}
 
 xx <- seq(-5,-4,len=3)
 arrows(x0=xx[-3], y0=-0.2, x1=xx[-1], code=2, length=0.07, lwd=1.5, col="blue")
