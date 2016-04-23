@@ -7,6 +7,7 @@ library(plyr)
 library(lattice)
 library(mgcv)
 library(MASS)
+library(pander)
 
 # Define function to use for plotting confidence intervals
 addpoly <- function(x, y1, y2, col=alpha("lightgrey", 0.8), ...){
@@ -29,6 +30,10 @@ data$propD <- data$D.SH / (data$C.SH + data$D.SH)
 # Categorize C- and D-dominated corals based on community composition at time zero
 dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample, 
                                                      dom=ifelse(is.na(propD), NA, ifelse(propD > 0.5, "D", "C")))))
+# dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample,
+#   dom=ifelse(is.na(propD), NA, ifelse(propD > 0.9, "D", ifelse(propD < 0.1, "C", NA))))))
+
+
 # Merge dominant symbiont classification with rest of data
 data <- merge(data, dom, by="sample", all.x=T)
 table(data[data$time==0, "dom"])  # 27 C-dominant and 88 D-dominant corals = 115 corals with qPCR data at t0
