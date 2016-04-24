@@ -28,7 +28,7 @@ pander(n, style="grid")
 -----
 
 ## Analyze Fv/Fm data
-We utilize generalized additive mixed models (GAMMs) to model relative Fv/Fm values as a smooth function of time, with dominant symbiont clade as a fixed effect and mother colony and core as random effects. We fit separate models for the cooling treatment and the heating treatment. After fitting the models, we simulate from the posterior distribution of the parameters of the fitted models to generate confidence intervals on fitted values. To test whether Fv/Fm differs between C-dominated and D-dominated corals, we generate a confidence interval on the difference between these groups from the simulated values, and test whether it includes zero.
+We utilize generalized additive mixed models (GAMMs) to model relative Fv/Fm values as a smooth function of time, with dominant symbiont clade as a fixed effect and mother colony and core as random effects. We fit separate models for the cooling treatment and the heating treatment. After fitting the models, we simulate (n=1000) from the posterior distribution of the parameters of the fitted models to generate 95% confidence intervals on fitted values. To test whether Fv/Fm differs between C-dominated and D-dominated corals, we also generate a 95% confidence interval on the difference between these groups from the simulated values, and test whether it includes zero.
 
 ### Cooling treatment
 ```{r cool_gamm}
@@ -158,7 +158,7 @@ Relative Fv/Fm is significantly higher (p < 0.05) in D-dominated corals than C-d
 ------
 
 ## Analyze symbiont abundance (S/H ratios)
-Symbiont abundance is analyzed for each treatment using a linear mixed model with log-transformed total symbiont to host cell ratio (S/H ratio) as the response variable, with a fixed effect of time and dominant symbiont clade, and random effects of mother colony and core. After fitting the model, Dunnett's tests are performed within each group of corals to determine if the total S/H ratio is different from time zero.
+Symbiont abundance is analyzed for each treatment using a linear mixed model with log-transformed total symbiont to host cell ratio (S/H ratio) as the response variable, with a fixed effect of time and dominant symbiont clade, and random effects of mother colony and core. After fitting the model, Dunnett's tests are performed within each group of corals to determine if the total S/H ratio is different from time zero. When significant differences were identified (p<0.05), the percent change in S/H ratio was calculated relative to time zero.
 
 ### Cooling treatment
 ```{r cool_SHmod}
@@ -253,7 +253,7 @@ legend("topright", legend=c("Corals initially dominated by clade C", "Corals ini
 ------
 
 ## Analyze dynamics of dominant and non-dominant symbionts together
-The previous analysis was on the total symbiont to host cell ratio, but did not distinguish between clade C and D symbionts. Clade D symbionts are present at lower levels in clade C-dominated corals, and vice versa. Here, we analyze the dynamics of both clades simultaneously within C- and D-dominated corals using a linear mixed model approach.
+The previous analysis was on the total symbiont to host cell ratio, but did not distinguish between clade C and D symbionts. Clade D symbionts are present at lower levels in clade C-dominated corals, and vice versa. Here, we analyze the dynamics of both clades simultaneously within C- and D-dominated corals using a linear mixed model approach. To analyze the dynamics of both (dominant and non-dominant) clades within corals in each treatment, log-transformed clade-specific S/H ratios were modeled as a function of clade identity, time, and dominant clade identity, with mother colony and core as random effects. Significant changes in either clade C or D abundance within C- and D-dominated corals across consecutive sampling intervals were evaluated with the package lsmeans.
 
 ### Cooling treatment
 ```{r cool_CD}
@@ -284,7 +284,7 @@ df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
-plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)")
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", xaxs="i", yaxs="i")
 abline(a=0,b=1,lty=2)
 arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
 arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
@@ -347,7 +347,7 @@ df <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
-plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)")
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", xaxs="i", yaxs="i")
 abline(a=0,b=1,lty=2)
 arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
 arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
@@ -481,7 +481,7 @@ df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
-plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75)
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
 #title("A. Cooling", adj=0, cex.main=1, line=0.5)
 text(par("usr")[1], par("usr")[4], expression(bold("A.  ")), xpd=NA, pos=2, outer=T)
 abline(a=0,b=1,lty=2)
@@ -516,7 +516,7 @@ df <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
-plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75)
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
 #title("B. Heating", adj=0, cex.main=1, line=0.5)
 text(par("usr")[1], par("usr")[4], expression(bold("B.  ")), xpd=NA, pos=2, outer=T)
 abline(a=0,b=1,lty=2)
