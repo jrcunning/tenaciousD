@@ -1,5 +1,12 @@
 source('setup.R')
 
+# To evaluate the potential influence of previous bleaching history on the response of Fv/Fm and 
+# total S/H over time, we tested for a significant symbiont*time interaction in corals with the same 
+# history but different dominant symbionts (highly significant), and for a history*time interaction 
+# in corals with the same dominant symbiont but different histories (not significant; see Supplementary 
+# Information). While these tests were only possible for a small subset of corals (since most D corals 
+# had previously bleached and most C corals had not), they support dominant symbiont rather than 
+# bleaching history as the primary driver of coral response.
 
 # Test for clade*time effect in corals that had previously bleached in cooling treatment
 table(data$prevBleach, data$dom, data$ramp)
