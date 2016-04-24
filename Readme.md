@@ -17,9 +17,11 @@ This repository contains all of the raw data and analysis scripts to accompany t
 **tenaciousD.Rproj:** R project file used by RStudio to manage repository.
 
 **tenaciousD_data.csv:** CSV file containing all raw data. Column headings are as follows:
+
 - sample: coral core unique identifier
 - mother: mother colony from which core was taken
 - history: thermal history of core in previous study (Silverstein et al. 2015)
+
 | history | bleach1 | recovtemp1 | bleach2 | recovtemp2 |
 |---------|---------|------------|---------|------------|
 | A'      | control | 24         | control | 24         |
@@ -34,6 +36,7 @@ This repository contains all of the raw data and analysis scripts to accompany t
 | E*      | DCMU    | 24         | heat    | 24         |
 | F'      | DCMU    | 29         | control | 29         |
 | F*      | DCMU    | 29         | heat    | 29         |
+
 - ramp: whether heating or cooling treatment was applied
 - time: day on which datum or sample was collected
 - fvfm: maximum quantum yield of photosystem II
