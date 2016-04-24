@@ -30,19 +30,28 @@ data$propD <- data$D.SH / (data$C.SH + data$D.SH)
 # Categorize C- and D-dominated corals based on community composition at time zero
 dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample, 
                                                      dom=ifelse(is.na(propD), NA, ifelse(propD > 0.5, "D", "C")))))
-# dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample,
-#   dom=ifelse(is.na(propD), NA, ifelse(propD > 0.9, "D", ifelse(propD < 0.1, "C", NA))))))
-
+#Based on the relative abundance of clades C and D at time zero, each coral was categorized as 
+#either initially clade C-dominated or clade D-dominated (groups hereafter referred to as C corals 
+#and D corals, respectively). For samples missing qPCR data at time zero, data from the previous 
+#time point (Silverstein et al. 2015) were substituted in the case of non-bleached corals. For 
+#bleached corals, no data were substituted but cores were categorized as C- or D-dominated based 
+#on data from the subsequent time point. For samples in which no clade C or D was detected, the 
+#S/H ratio for that clade was set to a value just below the detection threshold, defined as the 
+#minimum S/H ratio detected for that clade across the entire dataset (1e-6 for clade C, 1e-4 for 
+#clade D).
 
 # Merge dominant symbiont classification with rest of data
 data <- merge(data, dom, by="sample", all.x=T)
 table(data[data$time==0, "dom"])  # 27 C-dominant and 88 D-dominant corals = 115 corals with qPCR data at t0
 data <- data[with(data, order(sample, time)), ]
-# Keep only those corals with data at time zero
-data <- data[!is.na(data$dom),]
+# Assign dominant symbiont to corals missing data for t0
+# 2_24 is missing data but was never heated, so assign C dominant
+data[data$sample=="2_24", "dom"] <- "C"
+# All other corals without data for t0 were subsequently D dominant at other times, so assign D dominance
+data$dom[is.na(data$dom)] <- "D"
 # Replace zeros with detection limits (just below minimum detected value)
-table(data$C.SH==0) # 23% of samples had no detectable clade C
-table(data$D.SH==0) # 11% of samples had no detectable clade D
+table(data$C.SH==0) # 22% of samples had no detectable clade C
+table(data$D.SH==0) # 16% of samples had no detectable clade D
 min(data[data$C.SH!=0,"C.SH"], na.rm=T) # detection limit for C is ~1e-6
 min(data[data$D.SH!=0,"D.SH"], na.rm=T) # detection limit for D is ~1e-4
 data[data$C.SH==0 & !is.na(data$C.SH), "C.SH"] <- 1e-6
