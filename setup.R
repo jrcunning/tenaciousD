@@ -25,11 +25,6 @@ data$prevBleach <- ifelse(data$history %in% c("24A'", "B'", "A'"), "NB", "B")
 # Adjust and transform data -----
 # Create factor version of time
 data$timef <- factor(data$time)
-# Calculate proportion D in each sample
-data$propD <- data$D.SH / (data$C.SH + data$D.SH)
-# Categorize C- and D-dominated corals based on community composition at time zero
-dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample, 
-                                                     dom=ifelse(is.na(propD), NA, ifelse(propD > 0.5, "D", "C")))))
 #Based on the relative abundance of clades C and D at time zero, each coral was categorized as 
 #either initially clade C-dominated or clade D-dominated (groups hereafter referred to as C corals 
 #and D corals, respectively). For samples missing qPCR data at time zero, data from the previous 
@@ -39,6 +34,17 @@ dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample,
 #S/H ratio for that clade was set to a value just below the detection threshold, defined as the 
 #minimum S/H ratio detected for that clade across the entire dataset (1e-6 for clade C, 1e-4 for 
 #clade D).
+# Calculate proportion D in each sample
+data$propD <- data$D.SH / (data$C.SH + data$D.SH)
+# Categorize C- and D-dominated corals based on community composition at time zero
+dom <- with(data[data$time==0, ], na.omit(data.frame(sample=sample, 
+                                                     dom=ifelse(is.na(propD), NA, ifelse(propD > 0.5, "D", "C")))))
+
+# Count number of cores with mixed communities
+syms <- aggregate(data.frame(C=data$C.SH, D=data$D.SH), by=list(core=data$sample), FUN=mean, na.rm=T)
+symstab <- addmargins(table(syms$C!=0, syms$D!=0)) # True if ever contained C (rows) or D (columns)
+dimnames(symstab) <- list(C_detected=c("no", "yes", "Sum"), D_detected=c("no", "yes", "Sum"))
+ftable(symstab)  # 129/158 had both detected at least once (81.6%)
 
 # Merge dominant symbiont classification with rest of data
 data <- merge(data, dom, by="sample", all.x=T)
