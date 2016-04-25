@@ -28,7 +28,7 @@ pander(n, style="grid")
 -----
 
 ## Analyze Fv/Fm data
-We utilize generalized additive mixed models (GAMMs) to model relative Fv/Fm values as a smooth function of time, with dominant symbiont clade as a fixed effect and mother colony and core as random effects. We fit separate models for the cooling treatment and the heating treatment. After fitting the models, we simulate (n=1000) from the posterior distribution of the parameters of the fitted models to generate 95% confidence intervals on fitted values. To test whether Fv/Fm differs between C-dominated and D-dominated corals, we also generate a 95% confidence interval on the difference between these groups from the simulated values, and test whether it includes zero.
+We utilize generalized additive mixed models (GAMMs) to model relative Fv/Fm values as a smooth function of time, with dominant symbiont clade as a fixed effect and mother colony and core as random effects. We fit separate models for the cooling treatment and the heating treatment. After fitting the models, we simulate (n=1000) from the posterior distribution of the parameters of the fitted models and generate 84% confidence intervals on fitted values for visual display purposes (non-overlapping 84% confidence intervals are approximately equal to a significant difference at p < 0.05). To formally conduct this test as well to determing whether Fv/Fm differs between C-dominated and D-dominated corals on each date, we also generate a 95% confidence interval on the difference between these groups from the simulated values, and test whether it includes zero.
 
 ### Cooling treatment
 ```{r cool_gamm}
@@ -44,9 +44,9 @@ set.seed(789)
 Rbeta <- mvrnorm(n = 1000, coef(gm.cool$gam), vcov(gm.cool$gam))
 Xp <- predict(gm.cool$gam, newdata = pdat.cool, type = "lpmatrix")
 sim <- Xp %*% t(Rbeta)
-# Extract 95% confidence intervals from simulation
-gm.cool.pred$lci <- apply(sim, 1, quantile, 0.025)
-gm.cool.pred$uci <- apply(sim, 1, quantile, 0.975)
+# Extract 84% confidence intervals from simulation
+gm.cool.pred$lci <- apply(sim, 1, quantile, 0.08)
+gm.cool.pred$uci <- apply(sim, 1, quantile, 0.92)
 ```
 
 #### Plot raw data with fitted model
@@ -107,8 +107,8 @@ Rbeta <- mvrnorm(n = 1000, coef(gm.heat$gam), vcov(gm.heat$gam))
 Xp <- predict(gm.heat$gam, newdata = pdat.heat, type = "lpmatrix")
 sim <- Xp %*% t(Rbeta)
 # Extract 95% confidence intervals of simulated values for plotting
-gm.heat.pred$lci <- apply(sim, 1, quantile, 0.025)
-gm.heat.pred$uci <- apply(sim, 1, quantile, 0.975)
+gm.heat.pred$lci <- apply(sim, 1, quantile, 0.08)
+gm.heat.pred$uci <- apply(sim, 1, quantile, 0.92)
 ```
 
 #### Plot raw data with fitted model
@@ -285,6 +285,11 @@ df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
 plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", xaxs="i", yaxs="i")
+for (tot in 10^seq(-5,-1,1)) {
+  D <- 10^seq(-6,-1,0.01)
+  C <- tot-D
+  lines(c(log10(D), rev(log10(C))), c(log10(C), rev(log10(D))), col="gray", lty=1)
+}
 abline(a=0,b=1,lty=2)
 arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
 arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
@@ -348,7 +353,12 @@ df$C.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
 plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", xaxs="i", yaxs="i")
-abline(a=0,b=1,lty=2)
+for (tot in 10^seq(-5,-1,1)) {
+  D <- 10^seq(-6,-1,0.01)
+  C <- tot-D
+  lines(c(log10(D), rev(log10(C))), c(log10(C), rev(log10(D))), col="gray", lty=1)
+}
+abline(a=0,b=1,lty=2, col="gray")
 arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
 arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
 for (j in 2:nrow(df)) {
@@ -378,6 +388,7 @@ rect(-6,-0.75,-3.8,0)
 
 # Final figures
 ## Figure 1
+The impact of incremental cooling (A.) and heating (B.) on relative Fv/Fm (upper panels) and total symbiont abundance (lower panels). For Fv/Fm, mean ± SD at each time point are plotted along with the fitted GAMM (solid lines) and 84% confidence intervals (shaded region) for initially C-dominated corals (blue) and D-dominated corals (red). Non-overlapping 84% confidence intervals indicate a significant difference between C and D corals at p < 0.05. For symbiont abundance, the mean of log-transformed total S/H ratios ± SD at each time point are plotted for intially C-dominated (blue) and D-dominated (red) corals. Significant differences within each group relative to initial values are indicated by an asterisk, along with the percent reduction in total S/H ratio. The horizontal axis displays days since the experiment began (below axis), and the temperature (°C) corals experienced during each weeklong increment (above axis).
 ```{r Fig1, echo=FALSE, fig.height=6.85039, fig.width=6.85039}
 #pdf(file = "output/Figure1.pdf", width=6.85, height=6.85)
 layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
@@ -475,6 +486,7 @@ for (i in 1:nrow(heat.diff)) {
 ```
 
 ## Figure 2
+Dynamics of both dominant and subdominant symbionts in corals during incremental cooling (A.) and heating (B.) Fitted values of mean abundance of clade C and D symbionts in both C-dominated (blue) and D-dominated (red) corals from linear mixed models are plotted ± SE. Arrows connect consecutive time points corresponding to temperatures indicated in the legend. Letters at the midpoint of an arrow represent a statistically significant change in the abundance of the clade indicated at the specific time interval (p < 0.05). The dashed diagonal line represents equal abundances of clades C and D, and gray contours represent equal sum total abundance of C and D (i.e., constant total S/H) at order of magnitude intervals.
 ```{r Fig2, echo=FALSE, fig.height=3.425195, fig.width=6.85039}
 par(mfrow=c(1,2), mar=c(2,2,0.5,0.5), mgp=c(1,0,0), tck=0.025)
 df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
@@ -482,6 +494,11 @@ df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
 plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
+for (tot in 10^seq(-5,-1,1)) {
+  D <- 10^seq(-6,-1,0.01)
+  C <- tot-D
+  lines(c(log10(D), rev(log10(C))), c(log10(C), rev(log10(D))), col="gray", lty=1)
+}
 #title("A. Cooling", adj=0, cex.main=1, line=0.5)
 text(par("usr")[1], par("usr")[4], expression(bold("A.  ")), xpd=NA, pos=2, outer=T)
 abline(a=0,b=1,lty=2)
@@ -517,6 +534,11 @@ df$C.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
 plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
+for (tot in 10^seq(-5,-1,1)) {
+  D <- 10^seq(-6,-1,0.01)
+  C <- tot-D
+  lines(c(log10(D), rev(log10(C))), c(log10(C), rev(log10(D))), col="gray", lty=1)
+}
 #title("B. Heating", adj=0, cex.main=1, line=0.5)
 text(par("usr")[1], par("usr")[4], expression(bold("B.  ")), xpd=NA, pos=2, outer=T)
 abline(a=0,b=1,lty=2)
