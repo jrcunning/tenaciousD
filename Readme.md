@@ -8,7 +8,7 @@ This repository contains all of the raw data and analysis scripts to accompany t
 
 **tenaciousD_analysis.Rmd:** R Markdown file containing code to perform all analyses and generate all figures used in the study, along with detailed description and rationale for statistical approach
 
-**tenaciousD_analysis.html:** output of R Markdown file
+[**tenaciousD_analysis.html:**](tenaciousD_analysis.html) output of R Markdown file
 
 **setup.R:** R script that imports data and performs initial data carpentry to prepare for analyses.
 
