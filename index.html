@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>TenaciousD by jrcunning</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>TenaciousD</h1>
+        <p></p>
+
+        <p class="view"><a href="https://github.com/jrcunning/tenaciousD">View the Project on GitHub <small>jrcunning/tenaciousD</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/jrcunning/tenaciousD/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/jrcunning/tenaciousD/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/jrcunning/tenaciousD">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p>This repository contains all of the raw data and analysis scripts to accompany the manuscript (in prep):</p>
+
+<h1>
+<a id="tenacious-d-bleaching-resistant-symbiodinium-in-clade-d-are-retained-in-reef-corals-at-both-high-and-low-temperature-extremes-despite-photophysiological-stress" class="anchor" href="#tenacious-d-bleaching-resistant-symbiodinium-in-clade-d-are-retained-in-reef-corals-at-both-high-and-low-temperature-extremes-despite-photophysiological-stress" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Tenacious D: bleaching-resistant Symbiodinium in clade D are retained in reef corals at both high and low temperature extremes despite photophysiological stress</h1>
+
+<h2>
+<a id="by-r-silverstein-r-cunning-and-ac-baker" class="anchor" href="#by-r-silverstein-r-cunning-and-ac-baker" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>by R Silverstein, R Cunning, and AC Baker</h2>
+
+<h3>
+<a id="repository-contents" class="anchor" href="#repository-contents" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Repository contents:</h3>
+
+<p><strong>tenaciousD_analysis.Rmd:</strong> R Markdown file containing code to perform all analyses and generate all figures used in the study, along with detailed description and rationale for statistical approach</p>
+
+<p><strong>tenaciousD_analysis.html:</strong> output of R Markdown file</p>
+
+<p><strong>setup.R:</strong> R script that imports data and performs initial data carpentry to prepare for analyses.</p>
+
+<p><strong>supp_analysis.R:</strong> Supplementary R script that tests the relative impact of thermal history vs. dominant symbiont clade on coral responses.</p>
+
+<p><strong>tenaciousD.Rproj:</strong> R project file used by RStudio to manage repository.</p>
+
+<p><strong>tenaciousD_data.csv:</strong> CSV file containing all raw data. Column headings are as follows:</p>
+
+<ul>
+<li>sample: coral core unique identifier</li>
+<li>mother: mother colony from which core was taken</li>
+<li>history: thermal history of core in previous study (Silverstein et al. 2015)</li>
+</ul>
+
+<table>
+<thead>
+<tr>
+<th>history</th>
+<th>bleach1</th>
+<th>recovtemp1</th>
+<th>bleach2</th>
+<th>recovtemp2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A'</td>
+<td>control</td>
+<td>24</td>
+<td>control</td>
+<td>24</td>
+</tr>
+<tr>
+<td>A*</td>
+<td>control</td>
+<td>24</td>
+<td>heat</td>
+<td>24</td>
+</tr>
+<tr>
+<td>B'</td>
+<td>control</td>
+<td>29</td>
+<td>control</td>
+<td>29</td>
+</tr>
+<tr>
+<td>B*</td>
+<td>control</td>
+<td>29</td>
+<td>heat</td>
+<td>29</td>
+</tr>
+<tr>
+<td>C'</td>
+<td>heat</td>
+<td>24</td>
+<td>control</td>
+<td>24</td>
+</tr>
+<tr>
+<td>C*</td>
+<td>heat</td>
+<td>24</td>
+<td>heat</td>
+<td>24</td>
+</tr>
+<tr>
+<td>D'</td>
+<td>heat</td>
+<td>29</td>
+<td>control</td>
+<td>29</td>
+</tr>
+<tr>
+<td>D*</td>
+<td>heat</td>
+<td>29</td>
+<td>heat</td>
+<td>29</td>
+</tr>
+<tr>
+<td>E'</td>
+<td>DCMU</td>
+<td>24</td>
+<td>control</td>
+<td>24</td>
+</tr>
+<tr>
+<td>E*</td>
+<td>DCMU</td>
+<td>24</td>
+<td>heat</td>
+<td>24</td>
+</tr>
+<tr>
+<td>F'</td>
+<td>DCMU</td>
+<td>29</td>
+<td>control</td>
+<td>29</td>
+</tr>
+<tr>
+<td>F*</td>
+<td>DCMU</td>
+<td>29</td>
+<td>heat</td>
+<td>29</td>
+</tr>
+</tbody>
+</table>
+
+<ul>
+<li>ramp: whether heating or cooling treatment was applied</li>
+<li>time: day on which datum or sample was collected</li>
+<li>fvfm: maximum quantum yield of photosystem II</li>
+<li>C.SH: symbiont to host ratio of clade C <em>Symbiodinium</em>
+</li>
+<li>D.SH: symbiont to host ratio of clade D <em>Symbiodinium</em>
+</li>
+<li>tot.SH: total symbiont to host ratio (sum of C and D ratios)</li>
+</ul>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/jrcunning">jrcunning</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
