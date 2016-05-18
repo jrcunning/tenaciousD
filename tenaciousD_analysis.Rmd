@@ -1,7 +1,7 @@
 ---
 title: "tenaciousD data analysis"
 author: "Ross Cunning"
-date: "April 17, 2016"
+date: "May 17, 2016"
 output: html_document
 ---
 
@@ -186,7 +186,7 @@ axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=-0.03)
 axis(side=1, at=seq(0,63,7), labels=NA, lwd=0, lwd.ticks=par("lwd"), line=2, tck=0.03)
 mtext(side=1, text="days (below) and temperature (°C, above)", line=4)
 axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), "°"), tick=F, line=-0.5)
-mtext(side=2, text="log10 S/H ratio", line=2)
+mtext(side=2, text="Symbiont abundance (log S/H)", line=2)
 pl <- lapply(datlist[["cool"]], function(dom) {
   dom <- na.omit(dom)
   arrows(dom$time, dom$logtot.SH.mean + dom$logtot.SH.sd, dom$time, dom$logtot.SH.mean - dom$logtot.SH.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -231,7 +231,7 @@ axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=-0.03)
 axis(side=1, at=seq(0,63,7), labels=NA, lwd=0, lwd.ticks=par("lwd"), line=2, tck=0.03)
 mtext(side=1, text="days (below) and temperature (°C, above)", line=4)
 axis(side=1, at=seq(0,41,7)+3.5, labels=paste0(seq(30,35,1), "°"), tick=F, line=-0.5)
-mtext(side=2, text="log10 S/H ratio", line=2)
+mtext(side=2, text="Symbiont abundance (log S/H)", line=2)
 pl <- lapply(datlist[["heat"]], function(dom) {
   dom <- na.omit(dom)
   arrows(dom$time, dom$logtot.SH.mean + dom$logtot.SH.sd, dom$time, dom$logtot.SH.mean - dom$logtot.SH.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -414,6 +414,7 @@ pl <- lapply(datlist[["cool"]], function(dom) {
          code=3, angle=90, length=0.05, xpd=NA, col=list("C"="blue", "D"="red")[[dom$dom[1]]])
   points(dom$rfvfm.mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
 })
+legend("bottomleft", legend=c("C-corals", "D-corals"), inset = 0.1, pch=21, pt.bg=c("blue","red"))
 
 #cool.sigdays <- as.numeric(names(cool.test0[cool.test0==F]))
 #points(cool.sigdays, c(1.07,1.05,1.03,1.02,1,0.97,0.85,0.75,0.65), pch="*", cex=1.5)
@@ -423,7 +424,7 @@ par(mar=c(3.5,3,0,0))
 plot(NA, xlim=c(0,63), ylim=c(-4, 0.5), bty="n", tck=0.025, ylab="", xlab="", xaxt="n")
 axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=0.025)
 axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), "°"), tick=F, line=0.6)
-mtext(side=2, text="log10 S/H ratio", line=1.5, cex=0.75)
+mtext(side=2, text="Symbiont abundance (log S/H)", line=1.5, cex=0.75)
 pl <- lapply(datlist[["cool"]], function(dom) {
   dom <- na.omit(dom)
   arrows(dom$time, dom$logtot.SH.mean + dom$logtot.SH.sd, dom$time, dom$logtot.SH.mean - dom$logtot.SH.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -482,7 +483,7 @@ for (i in 1:nrow(heat.diff)) {
     text(day[i], with(datlist[["heat"]][[dom]], logtot.SH.mean[time==day[i]]), labels=loss[i], pos=c(2,2,2)[i])
   })
 }
-
+#dev.off()
 
 ```
 
@@ -490,6 +491,7 @@ for (i in 1:nrow(heat.diff)) {
 Dynamics of both dominant and subdominant symbionts in corals during incremental cooling (A.) and heating (B.) Fitted values of mean abundance of clade C and D symbionts in both C-dominated (blue) and D-dominated (red) corals from linear mixed models are plotted ± SE. Arrows connect consecutive time points corresponding to temperatures indicated in the legend. Letters at the midpoint of an arrow represent a statistically significant change in the abundance of the clade indicated at the specific time interval (p < 0.05). The dashed diagonal line represents equal abundances of clades C and D, and gray contours represent equal sum total abundance of C and D (i.e., constant total S/H) at order of magnitude intervals.
 
 ```{r Fig2, echo=FALSE, fig.height=3.425195, fig.width=6.85039}
+#pdf(file="output/Figure2.pdf", width=6.85039, height=3.425195)
 par(mfrow=c(1,2), mar=c(2,2,0.5,0.5), mgp=c(1,0,0), tck=0.025)
 df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
@@ -569,4 +571,5 @@ arrows(x0=xx[-3], y0=-0.4, x1=xx[-1], code=2, length=0.07, lwd=1.5, col="red")
 text(xx, -0.6, labels=c(29,33,35), cex=0.5, adj=c(0.5, 0.35))
 text(-5.5, c(-0.2, -0.4, -0.6), labels=c("C-dom.", "D-dom.", "°C"), cex=0.6, adj=c(0.5, 0.35))
 rect(-6,-0.75,-3.8,0)
+#dev.off
 ```
