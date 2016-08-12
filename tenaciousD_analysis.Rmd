@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, cache = TRU
 
 ## Load libraries and prepare data for analysis
 The "setup.R" script loads required libraries and imports data. Total S/H ratios and proportion clade D are calculated for each sample, and corals are categorized as C-dominated or D-dominated based on their dominant symbiont at time zero. Relative changes in Fv/Fm are calculated for each sample. After sourcing this script, the data are ready to be analyzed.
+
 ```{r run_setup, include=FALSE}
 source("setup.R")
 ```
@@ -390,14 +391,15 @@ rect(-6,-0.75,-3.8,0)
 ## Figure 1
 The impact of incremental cooling (A.) and heating (B.) on relative Fv/Fm (upper panels) and total symbiont abundance (lower panels). For Fv/Fm, mean ± SD at each time point are plotted along with the fitted GAMM (solid lines) and 84% confidence intervals (shaded region) for initially C-dominated corals (blue) and D-dominated corals (red). Non-overlapping 84% confidence intervals indicate a significant difference between C and D corals at p < 0.05. For symbiont abundance, the mean of log-transformed total S/H ratios ± SD at each time point are plotted for intially C-dominated (blue) and D-dominated (red) corals. Significant differences within each group relative to initial values are indicated by an asterisk, along with the percent reduction in total S/H ratio. The horizontal axis displays days since the experiment began (below axis), and the temperature (°C) corals experienced during each weeklong increment (above axis).
 
-```{r Fig1, echo=FALSE, fig.height=6.85039, fig.width=6.85039}
-#pdf(file = "output/Figure1.pdf", width=6.85, height=6.85)
-layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
+```{r Fig1, echo=FALSE, fig.height=4, fig.width=4}
+pdf(file = "output/Figure1.pdf", width=4.5, height=5)
+#layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
+layout(mat=matrix(c(1,1,2,2,1,1,2,2,1,1,2,2,3,3,4,4,3,3,4,4), ncol=5))
 # Cooling Fv/Fm
-par(mar=c(0,3,3.5,0), mgp=c(1.5,0.25,0), tck=0.025, xpd=NA)
+par(mar=c(0,3,2.5,0.5), mgp=c(1.5,0.25,0), tck=0.025, xpd=NA)
 plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", xaxt="n", yaxt="n", ann=F)
 axis(side=2, at=seq(0,1,0.2), labels=c("0","0.2","0.4","0.6","0.8","1"), tck=0.025)
-title("A. Cooling", adj=0, cex.main=1.5, line=1.5)
+title("A. Cooling", adj=0, cex.main=1.5, line=1)
 mtext(side=2, text="Relative Fv/Fm", cex=0.75, line=1.5)
 with(subset(gm.cool.pred, dom=="C"), {
   addpoly(time, uci, lci, col=alpha("blue", 0.4))
@@ -420,11 +422,11 @@ legend("bottomleft", legend=c("C-corals", "D-corals"), inset = 0.1, pch=21, pt.b
 #points(cool.sigdays, c(1.07,1.05,1.03,1.02,1,0.97,0.85,0.75,0.65), pch="*", cex=1.5)
 
 # Cooling total S/H ratio
-par(mar=c(3.5,3,0,0))
+par(mar=c(3.5,3,0,0.5))
 plot(NA, xlim=c(0,63), ylim=c(-4, 0.5), bty="n", tck=0.025, ylab="", xlab="", xaxt="n")
 axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=0.025)
-axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), "°"), tick=F, line=0.6)
-mtext(side=2, text="Symbiont abundance (log S/H)", line=1.5, cex=0.75)
+axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), ""), tick=F, line=0.6)
+mtext(side=2, text="Symbiont abundance (log10 S/H)", line=1.5, cex=0.75)
 pl <- lapply(datlist[["cool"]], function(dom) {
   dom <- na.omit(dom)
   arrows(dom$time, dom$logtot.SH.mean + dom$logtot.SH.sd, dom$time, dom$logtot.SH.mean - dom$logtot.SH.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -445,10 +447,10 @@ axis(side=1, at=-7, labels="days", tick=F, line=2)
 
 
 # Heating Fv/Fm
-par(mar=c(0,3,3.5,0))
-plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", tck=0.025, xaxt="n", yaxt="n", ann=F)
+par(mar=c(0,2.5*2/3,2.5,1*2/3))
+plot(NA, xlim=c(0,42), ylim=c(0, 1), bty="n", tck=0.025, xaxt="n", yaxt="n", ann=F)
 axis(side=2, at=seq(0,1,0.2), labels=c("0","0.2","0.4","0.6","0.8","1"), tck=0.025)
-title("B. Heating", adj=0, cex.main=1.5, line=1.5)
+title("B. Heating", adj=0, cex.main=1.5, line=1)
 with(subset(gm.heat.pred, dom=="C"), {
   addpoly(time, uci, lci, col=alpha("blue", 0.4))
   lines(time, fit)
@@ -465,10 +467,10 @@ pl <- lapply(datlist[["heat"]], function(dom) {
 })
 
 # Heating total S/H ratio
-par(mar=c(3.5,3,0,0), xpd=NA)
-plot(NA, xlim=c(0,63), ylim=c(-4, 0.5), bty="n", tck=0.025, ylab="", xlab="", xaxt="n")
-axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=0.025)
-axis(side=1, at=seq(0,41,7)+3.5, labels=paste0(seq(30,35,1), "°"), tick=F, line=0.6)
+par(mar=c(3.5,2.5*2/3,0,1*2/3), xpd=NA)
+plot(NA, xlim=c(0,42), ylim=c(-4, 0.5), bty="n", tck=0.025, ylab="", xlab="", xaxt="n")
+axis(side=1, at=seq(0,42,7), labels=seq(0,42,7), line=2, tck=0.025)
+axis(side=1, at=seq(0,41,7)+3.5, labels=paste0(seq(30,35,1), ""), tick=F, line=0.6)
 pl <- lapply(datlist[["heat"]], function(dom) {
   dom <- na.omit(dom)
   arrows(dom$time, dom$logtot.SH.mean + dom$logtot.SH.sd, dom$time, dom$logtot.SH.mean - dom$logtot.SH.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -483,7 +485,7 @@ for (i in 1:nrow(heat.diff)) {
     text(day[i], with(datlist[["heat"]][[dom]], logtot.SH.mean[time==day[i]]), labels=loss[i], pos=c(2,2,2)[i])
   })
 }
-#dev.off()
+dev.off()
 
 ```
 
@@ -506,11 +508,11 @@ for (tot in 10^seq(-5,-1,1)) {
 #title("A. Cooling", adj=0, cex.main=1, line=0.5)
 text(par("usr")[1], par("usr")[4], expression(bold("A.  ")), xpd=NA, pos=2, outer=T)
 abline(a=0,b=1,lty=2)
-arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
-arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
+arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.01, angle=90, code=3, col="black")
+arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.01, angle=90, code=3, col="black")
 for (j in 2:nrow(df)) {
   if (as.numeric(df$timef)[j] > as.numeric(df$timef)[j-1]) {
-    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=2, col=c("blue","red")[df$dom[j]])
+    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=1.5, col=c("blue","red")[df$dom[j]])
   }
 }
 
@@ -546,11 +548,11 @@ for (tot in 10^seq(-5,-1,1)) {
 #title("B. Heating", adj=0, cex.main=1, line=0.5)
 text(par("usr")[1], par("usr")[4], expression(bold("B.  ")), xpd=NA, pos=2, outer=T)
 abline(a=0,b=1,lty=2)
-arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.025, angle=90, code=3, col="black")
-arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.025, angle=90, code=3, col="black")
+arrows(df$D.SH, df$C.SH+df$C.se, df$D.SH, df$C.SH-df$C.se, length=0.01, angle=90, code=3, col="black")
+arrows(df$D.SH+df$D.se, df$C.SH, df$D.SH-df$D.se, df$C.SH, length=0.01, angle=90, code=3, col="black")
 for (j in 2:nrow(df)) {
   if (as.numeric(df$time)[j] > as.numeric(df$time)[j-1]) {
-    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=2,
+    arrows(df$D.SH[j-1], df$C.SH[j-1], df$D.SH[j], df$C.SH[j], length=0.07, code=2, lwd=1.5,
            col=c("blue","red","green")[df$dom[j]])
   }
 }
@@ -571,5 +573,5 @@ arrows(x0=xx[-3], y0=-0.4, x1=xx[-1], code=2, length=0.07, lwd=1.5, col="red")
 text(xx, -0.6, labels=c(29,33,35), cex=0.5, adj=c(0.5, 0.35))
 text(-5.5, c(-0.2, -0.4, -0.6), labels=c("C-dom.", "D-dom.", "°C"), cex=0.6, adj=c(0.5, 0.35))
 rect(-6,-0.75,-3.8,0)
-#dev.off
+#dev.off()
 ```
