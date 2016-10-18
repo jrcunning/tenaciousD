@@ -77,6 +77,8 @@ for (sample in data$sample) {
 # Prepare raw data for plotting
 datsumm <- rbind(expand.grid(time=seq(0,63,7), ramp=factor("cool"), dom=factor(c("C","D"))),
                  expand.grid(time=seq(0,42,7), ramp=factor("heat"), dom=factor(c("C","D"))))
+datsumm$fvfm.mean <- aggregate(data$fvfm, by=list(interaction(data$time, data$dom, data$ramp)), FUN=mean, na.rm=T)$x
+datsumm$fvfm.sd <- aggregate(data$fvfm, by=list(interaction(data$time, data$dom, data$ramp)), FUN=sd, na.rm=T)$x
 datsumm$rfvfm.mean <- aggregate(data$rfvfm, by=list(interaction(data$time, data$dom, data$ramp)), FUN=mean, na.rm=T)$x
 datsumm$rfvfm.sd <- aggregate(data$rfvfm, by=list(interaction(data$time, data$dom, data$ramp)), FUN=sd, na.rm=T)$x
 datsumm$logtot.SH.mean <- aggregate(log10(data$tot.SH), by=list(interaction(data$time, data$dom, data$ramp)), FUN=mean, na.rm=T)$x

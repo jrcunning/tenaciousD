@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, cache = TRU
 ## Load libraries and prepare data for analysis
 The "setup.R" script loads required libraries and imports data. Total S/H ratios and proportion clade D are calculated for each sample, and corals are categorized as C-dominated or D-dominated based on their dominant symbiont at time zero. Relative changes in Fv/Fm are calculated for each sample. After sourcing this script, the data are ready to be analyzed.
 
-```{r run_setup, include=FALSE}
+```{r run_setup, include=FALSE, cache=F}
 source("setup.R")
 ```
 
@@ -26,12 +26,46 @@ n <- addmargins(n)
 pander(n, style="grid")
 ```
 
+Relative proportions of background symbionts in each group
+```{r bkgd_syms}
+# Mean and median amount of C in the C-dominated corals
+with(subset(data, time==0 & dom=="C"), 1-mean(propD, na.rm=T)); with(subset(data, time==0 & dom=="C"), 1-median(propD, na.rm=T))
+# Mean and median amount of D in the D-dominated corals
+with(subset(data, time==0 & dom=="D"), mean(propD, na.rm=T)); with(subset(data, time==0 & dom=="D"), median(propD, na.rm=T))
+```
+
 -----
 
 ## Analyze Fv/Fm data
-We utilize generalized additive mixed models (GAMMs) to model relative Fv/Fm values as a smooth function of time, with dominant symbiont clade as a fixed effect and mother colony and core as random effects. We fit separate models for the cooling treatment and the heating treatment. After fitting the models, we simulate (n=1000) from the posterior distribution of the parameters of the fitted models and generate 84% confidence intervals on fitted values for visual display purposes (non-overlapping 84% confidence intervals are approximately equal to a significant difference at p < 0.05). To formally conduct this test as well to determing whether Fv/Fm differs between C-dominated and D-dominated corals on each date, we also generate a 95% confidence interval on the difference between these groups from the simulated values, and test whether it includes zero.
+We utilize generalized additive mixed models (GAMMs) to model relative Fv/Fm values as a smooth function of time, with dominant symbiont clade as a fixed effect and mother colony and core as random effects. We fit separate models for the cooling treatment and the heating treatment. After fitting the models, we simulate (n=1000) from the posterior distribution of the parameters of the fitted models and generate 84% confidence intervals on fitted values for visual display purposes (non-overlapping 84% confidence intervals in Fig. 1 are approximately equal to a significant difference at p < 0.05). To formally conduct this test as well to determine whether Fv/Fm differs between C-dominated and D-dominated corals on each date, we also generate a 95% confidence interval on the difference between these groups from the simulated values, and test whether it includes zero.
 
 ### Cooling treatment
+
+#### Plot raw data
+Here, Fv/Fm data (mean ± s.d.) are plotted for clade C- and D-dominated corals.
+
+```{r cool_raw_plot, echo=FALSE, eval=T}
+par(mar=c(6,3,1,1), mgp=c(2,0.5,0), tck=-0.06, xpd=NA)
+plot(NA, xlim=c(0,63), ylim=c(0, 0.6), bty="n", tck=-0.03, xaxt="n", ann=F)
+mtext(side=2, text="Raw Fv/Fm", cex=1, line=1.75)
+
+# Plot raw data +/- standard deviation
+pl <- lapply(datlist[["cool"]], function(dom) {
+  arrows(dom$time, dom$fvfm.mean + dom$fvfm.sd, dom$time, dom$fvfm.mean - dom$fvfm.sd, 
+         code=3, angle=90, length=0.05, xpd=NA, col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+  points(dom$fvfm.mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
+})
+legend("bottomleft", legend=c("Corals initially dominated by clade C", "Corals initially dominated by clade D"),
+       pch=21, pt.bg=c("blue","red"), bty="n", inset=0.1)
+# Add x-axis
+axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=-0.03)
+axis(side=1, at=seq(0,63,7), labels=NA, lwd=0, lwd.ticks=par("lwd"), line=2, tck=0.03)
+mtext(side=1, text="days (below) and temperature (°C, above)", line=4)
+axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), "°"), tick=F, line=0.5)
+```
+
+#### Fit GAMM on relative change in Fv/Fm data
+
 ```{r cool_gamm}
 # Fit GAMM for cooling treatment
 gm.cool <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
@@ -50,8 +84,8 @@ gm.cool.pred$lci <- apply(sim, 1, quantile, 0.08)
 gm.cool.pred$uci <- apply(sim, 1, quantile, 0.92)
 ```
 
-#### Plot raw data with fitted model
-Here, Fv/Fm data (mean ± s.d.) are plotted for clade C- and D-dominated corals, along with the fitted values from the GAMM and 95% confidence intervals.
+#### Plot relative change data with fitted model
+Here, relative Fv/Fm data (mean ± s.d.) are plotted for clade C- and D-dominated corals, along with the fitted values from the GAMM and 95% confidence intervals.
 
 ```{r cool_gamm_plot, echo=FALSE}
 par(mar=c(6,3,1,1), mgp=c(2,0.5,0), tck=-0.06, xpd=NA)
@@ -81,6 +115,7 @@ axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), "°"), tick=F, lin
 ```
 
 #### Test if Fv/Fm is the same in C- and D-dominated corals at each sampling date
+
 ```{r cool_gamm_CvsD}
 # Calculate 95% confidence interval on difference between C and D corals at each sampling dates from simulation
 sim1 <- cbind(pdat.cool, sim)
@@ -94,6 +129,29 @@ t(matrix(cool.test0, dimnames=list(day=names(cool.test0), Ho="C-dom = D-dom")))
 Relative Fv/Fm is significantly higher (p < 0.05) in C-dominated corals than D-dominated corals on day 7 onwards.
 
 ### Heating treatment
+#### Plot raw data
+Here, Fv/Fm data (mean ± s.d.) are plotted for clade C- and D-dominated corals.
+
+```{r heat_raw_plot, echo=FALSE, eval=T}
+par(mar=c(6,3,1,1), mgp=c(2,0.5,0), tck=-0.06, xpd=NA)
+plot(NA, xlim=c(0,63), ylim=c(0, 0.6), bty="n", tck=-0.03, xaxt="n", ann=F)
+mtext(side=2, text="Raw Fv/Fm", cex=1, line=1.75)
+
+# Plot raw data +/- standard deviation
+pl <- lapply(datlist[["heat"]], function(dom) {
+  arrows(dom$time, dom$fvfm.mean + dom$fvfm.sd, dom$time, dom$fvfm.mean - dom$fvfm.sd, code=3, angle=90, length=0.05, xpd=NA, col=list("C"="blue", "D"="red")[[dom$dom[1]]])
+  points(dom$fvfm.mean ~ dom$time, pch=21, bg=list("C"="blue", "D"="red")[[dom$dom[1]]], ylim=c(0, 1), cex=1)
+})
+legend("topright", legend=c("Corals initially dominated by clade C", "Corals initially dominated by clade D"),
+       pch=21, pt.bg=c("blue","red"), bty="n", inset=0)
+# Add x-axis
+axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=-0.03)
+axis(side=1, at=seq(0,63,7), labels=NA, lwd=0, lwd.ticks=par("lwd"), line=2, tck=0.03)
+mtext(side=1, text="days (below) and temperature (°C, above)", line=4)
+axis(side=1, at=seq(0,41,7)+3.5, labels=paste0(seq(30,35,1), "°"), tick=F, line=0.5)
+
+```
+
 ```{r heat_gamm}
 # Fit GAMM for heating treatment
 gm.heat <- gamm(rfvfm ~ dom + s(time, by=dom, k=4), random=list(mother=~1, sample=~1), 
@@ -391,8 +449,8 @@ rect(-6,-0.75,-3.8,0)
 ## Figure 1
 The impact of incremental cooling (A.) and heating (B.) on relative Fv/Fm (upper panels) and total symbiont abundance (lower panels). For Fv/Fm, mean ± SD at each time point are plotted along with the fitted GAMM (solid lines) and 84% confidence intervals (shaded region) for initially C-dominated corals (blue) and D-dominated corals (red). Non-overlapping 84% confidence intervals indicate a significant difference between C and D corals at p < 0.05. For symbiont abundance, the mean of log-transformed total S/H ratios ± SD at each time point are plotted for intially C-dominated (blue) and D-dominated (red) corals. Significant differences within each group relative to initial values are indicated by an asterisk, along with the percent reduction in total S/H ratio. The horizontal axis displays days since the experiment began (below axis), and the temperature (°C) corals experienced during each weeklong increment (above axis).
 
-```{r Fig1, echo=FALSE, fig.height=4, fig.width=4}
-pdf(file = "output/Figure1.pdf", width=4.5, height=5)
+```{r Fig1, echo=FALSE, fig.height=5, fig.width=4.5}
+#pdf(file = "output/Figure1.pdf", width=4.5, height=5)
 #layout(mat=matrix(c(1,1,2,2,3,3,4,4), ncol=2))
 layout(mat=matrix(c(1,1,2,2,1,1,2,2,1,1,2,2,3,3,4,4,3,3,4,4), ncol=5))
 # Cooling Fv/Fm
@@ -400,7 +458,7 @@ par(mar=c(0,3,2.5,0.5), mgp=c(1.5,0.25,0), tck=0.025, xpd=NA)
 plot(NA, xlim=c(0,63), ylim=c(0, 1), bty="n", xaxt="n", yaxt="n", ann=F)
 axis(side=2, at=seq(0,1,0.2), labels=c("0","0.2","0.4","0.6","0.8","1"), tck=0.025)
 title("A. Cooling", adj=0, cex.main=1.5, line=1)
-mtext(side=2, text="Relative Fv/Fm", cex=0.75, line=1.5)
+mtext(side=2, text=expression(Relative ~ italic(F[v]/F[m])), cex=0.75, line=1.5)
 with(subset(gm.cool.pred, dom=="C"), {
   addpoly(time, uci, lci, col=alpha("blue", 0.4))
   lines(time, fit)
@@ -426,7 +484,7 @@ par(mar=c(3.5,3,0,0.5))
 plot(NA, xlim=c(0,63), ylim=c(-4, 0.5), bty="n", tck=0.025, ylab="", xlab="", xaxt="n")
 axis(side=1, at=seq(0,63,7), labels=seq(0,63,7), line=2, tck=0.025)
 axis(side=1, at=seq(0,62,7)+3.5, labels=paste0(seq(23,15,-1), ""), tick=F, line=0.6)
-mtext(side=2, text="Symbiont abundance (log10 S/H)", line=1.5, cex=0.75)
+mtext(side=2, text=expression(Symbiont~abundance~(log[10]~S/H)), line=1.5, cex=0.75)
 pl <- lapply(datlist[["cool"]], function(dom) {
   dom <- na.omit(dom)
   arrows(dom$time, dom$logtot.SH.mean + dom$logtot.SH.sd, dom$time, dom$logtot.SH.mean - dom$logtot.SH.sd, code=3, angle=90, length=0.05, xpd=NA,
@@ -485,7 +543,7 @@ for (i in 1:nrow(heat.diff)) {
     text(day[i], with(datlist[["heat"]][[dom]], logtot.SH.mean[time==day[i]]), labels=loss[i], pos=c(2,2,2)[i])
   })
 }
-dev.off()
+#dev.off()
 
 ```
 
@@ -499,7 +557,7 @@ df <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(coolmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
-plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)", ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab=expression(Clade~D~(log[10]~S/H)), ylab=expression(Clade~C~(log[10]~S/H)), cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
 for (tot in 10^seq(-5,-1,1)) {
   D <- 10^seq(-6,-1,0.01)
   C <- tot-D
@@ -539,7 +597,7 @@ df <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="lsmean")
 df$C.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$C.SH
 df$D.se <- dcast(heatmod.lsm, timef + dom ~ clade, value.var="SE")$D.SH
 df <- with(df, df[order(dom, timef), ])
-plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab="Clade D (log10 S/H)",ylab="Clade C (log10 S/H)", cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
+plot(NA, xlim=c(-6,0), ylim=c(-6,0), xlab=expression(Clade~D~(log[10]~S/H)),ylab=expression(Clade~C~(log[10]~S/H)), cex.lab=0.75, cex.axis=0.75, xaxs="i", yaxs="i")
 for (tot in 10^seq(-5,-1,1)) {
   D <- 10^seq(-6,-1,0.01)
   C <- tot-D
