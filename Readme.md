@@ -1,8 +1,8 @@
-This repository contains all of the raw data and analysis scripts to accompany the manuscript (in prep):
+This repository contains all of the raw data and analysis scripts to accompany the manuscript (in revision):
 
-# Tenacious D: bleaching-resistant Symbiodinium in clade D are retained in reef corals at both high and low temperature extremes despite photophysiological stress
+# Tenacious D: *Symbiodinium* in clade D remain in reef corals at both high and low temperature extremes despite impairment
 
-##by R Silverstein, R Cunning, and AC Baker
+##by RN Silverstein, R Cunning, and AC Baker
 
 ### Repository contents:
 
@@ -14,7 +14,7 @@ This repository contains all of the raw data and analysis scripts to accompany t
 
 **supp_analysis.R:** Supplementary R script that tests the relative impact of thermal history vs. dominant symbiont clade on coral responses.
 
-**tenaciousD.Rproj:** R project file used by RStudio to manage repository.
+**tenaciousD.Rproj:** R project file used by RStudio to manage project settings.
 
 **tenaciousD_data.csv:** CSV file containing all raw data. Column headings are as follows:
 
