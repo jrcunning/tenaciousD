@@ -20,7 +20,7 @@ This repository contains all of the raw data and analysis scripts to accompany t
 
 - sample: coral core unique identifier
 - mother: mother colony from which core was taken
-- history: thermal history of core in previous study (Silverstein et al. 2015)
+- history: thermal history of core in previous study [(Silverstein et al. 2015)](http://dx.doi.org/10.1111/gcb.12706)
 
 | history | bleach1 | recovtemp1 | bleach2 | recovtemp2 |
 |---------|---------|------------|---------|------------|
