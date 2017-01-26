@@ -33,11 +33,7 @@ With this work, we challenge the paradigm that temperature-induced photodamage i
 #### Output:
 [**tenaciousD_analysis.html:**](https://cdn.rawgit.com/jrcunning/tenaciousD/b1fc6c17/tenaciousD_analysis.html) output of R Markdown file
 
-
-
 -----
-
-
 
 **Thermal history:** 'bleach1' and 'bleach2' indicate whether a coral was bleached by heat or DCMU or neither (control) during the first and second experimental bleaching events in Silverstein et al. 2015. 'recovtemp1' and 'recovtemp2' indicate the temperature (°C) that the corals were held at after application of the first and second experimental bleaching events.
 
