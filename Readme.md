@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.260218.svg)](https://doi.org/10.5281/zenodo.260218)
+
 This repository contains all of the raw data and analysis scripts to accompany the manuscript:
 
 # Tenacious D: *Symbiodinium* in clade D remain in reef corals at both high and low temperature extremes despite impairment
